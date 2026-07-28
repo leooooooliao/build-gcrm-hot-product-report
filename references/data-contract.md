@@ -20,6 +20,9 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
     "广告消耗 Top 50": [],
     "飙升 Top 50": []
   },
+  "product_translations": {
+    "1732277424593932739": "PetPivot开放式自动清洁猫砂盆"
+  },
   "summary_bullets": ["...", "...", "..."],
   "recommendations": {
     "benchmarks": [],
@@ -57,6 +60,14 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
 
 Keep every numeric interval and change on separate lines exactly as displayed. Use strings for product IDs.
 
+## Chinese product-name mapping
+
+`product_translations` is required. Key it by `product_id` and provide one concise Chinese product name for every unique product across all collected rankings. If a source row legitimately has no product ID, use the exact fallback key `shop_name|product_name`.
+
+Do not repeat translations on each ranking row. Translate once and reuse the mapping so the same product always has the same Chinese name.
+
+Run `scripts/validate_translations.mjs --input <report-spec.json>` before building the workbook.
+
 `join_quality` must be one of:
 
 - `product_id`
@@ -84,4 +95,3 @@ Allowed actions:
 - `小单测试`
 
 Each recommendation ID must exist in `GMV Top 50` or `飙升 Top 50`.
-

@@ -1,6 +1,6 @@
 ---
 name: build-gcrm-hot-product-report
-description: Generate a concise merchant-facing GCRM hot-product Excel report for one country, one current GCRM level-1 category, and one date range. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片的 Excel。
+description: Generate a concise merchant-facing GCRM hot-product Excel report for one country, one current GCRM level-1 category, and one date range. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片和中英文商品名的 Excel。
 ---
 
 # 类目爆品报告
@@ -63,7 +63,7 @@ Never claim a title-only match is a confirmed product match.
 
 ## 3. Normalize and analyze
 
-Read `references/data-contract.md` and `references/analysis-rules.md`.
+Read `references/data-contract.md`, `references/translation-rules.md`, and `references/analysis-rules.md`.
 
 Create one JSON input matching the contract. Preserve blurred intervals exactly as displayed. Use interval midpoints only for calculations:
 
@@ -71,6 +71,14 @@ Create one JSON input matching the contract. Preserve blurred intervals exactly 
 - `短视频占比 = 短视频GMV区间中点 / 总GMV区间中点`
 
 The shares are estimates and may not sum to 100% because each source range is independently blurred.
+
+Create one concise Chinese product name for every unique collected product. Deduplicate by `product_id`, translate once, and store the result in `product_translations`. Then run:
+
+```bash
+node scripts/validate_translations.mjs --input "<report-spec.json>"
+```
+
+Do not build the workbook until the validator reports zero missing or invalid translations.
 
 Before writing conclusions, run:
 
@@ -116,6 +124,7 @@ Keep the established visual contract:
 - White body; dark navy section/table headers only.
 - Green font for increases; red font for decreases.
 - Product names stay on one line and clip instead of creating tall rows.
+- Show `中文商品简称` next to the original product title on the conclusion, selection-pool, and raw-data sheets.
 - Embed images for the selection pool and recommended products when available.
 - No decorative charts, KPI cards, heavy fills, or excessive borders.
 - Keep raw data and formulas auditable.
@@ -125,6 +134,7 @@ Keep the established visual contract:
 Require all of the following:
 
 - Formula-error scan returns zero matches.
+- Translation validation returns zero missing or invalid Chinese names.
 - Each sheet is rendered and visually checked.
 - Key conclusion values reconcile with the GMV Top 50 source.
 - The XLSX archive passes an integrity check.
