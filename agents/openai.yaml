@@ -1,4 +1,6 @@
 interface:
-  display_name: "GCRM 品类爆品报告"
-  short_description: "按国家、类目和周期生成清爽可执行的爆品选品 Excel"
-  default_prompt: "使用 $build-gcrm-hot-product-report 生成指定国家、一级类目和时间周期的爆品选品 Excel。"
+  display_name: "类目爆品报告"
+  short_description: "输入国家、类目和时间，生成清爽可执行的爆品选品报告"
+  default_prompt: "使用 $build-gcrm-hot-product-report（类目爆品报告）帮我看看近期机会吧：国家 US，类目宠物用品，时间最近30天。"
+policy:
+  allow_implicit_invocation: true

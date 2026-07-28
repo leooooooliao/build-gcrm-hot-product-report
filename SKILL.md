@@ -1,11 +1,17 @@
 ---
 name: build-gcrm-hot-product-report
-description: Generate a concise merchant-facing GCRM hot-product Excel report for one country, one current GCRM level-1 category, and one date range. Use when a user asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片的 Excel。
+description: Generate a concise merchant-facing GCRM hot-product Excel report for one country, one current GCRM level-1 category, and one date range. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片的 Excel。
 ---
 
-# Build GCRM Hot Product Report
+# 类目爆品报告
 
 Create one decision-ready report for one market and one level-1 category. Keep the interaction short and make the output reproducible.
+
+Users do not need to remember the English skill identifier. Treat natural requests such as the following as direct invocations:
+
+> 帮我做一份类目爆品报告吧：国家是 US，类目是宠物用品，时间看最近30天。
+
+Read `references/agent-compatibility.md` when installing or running outside Codex.
 
 ## 1. Resolve and validate the request
 
@@ -86,7 +92,7 @@ Label non-data explanations with `推测`. Focus on seasonality, product pain po
 
 ## 4. Build the workbook
 
-Use the bundled Node runtime and `@oai/artifact-tool` paths returned by `load_workspace_dependencies`. In a writable task directory, create `node_modules` as a symlink to the returned bundled `node_modules` directory.
+Prefer the bundled Node runtime and `@oai/artifact-tool` paths when the host provides them. In Codex, use paths returned by `load_workspace_dependencies` and create `node_modules` as a symlink to the returned bundled directory in a writable task directory.
 
 Run:
 
@@ -94,7 +100,9 @@ Run:
 node scripts/build_report.mjs --input "<report-spec.json>" --output "<output.xlsx>" --preview-dir "<preview-dir>"
 ```
 
-Write the final workbook under `outputs/<thread_id>/`.
+If the host does not provide `@oai/artifact-tool`, use its native spreadsheet/file tools to reproduce the workbook contract below. Do not pretend the bundled script ran. If the host cannot create or visually verify XLSX files, return the normalized JSON and explain the capability blocker instead of fabricating a workbook.
+
+In Codex, write the final workbook under `outputs/<thread_id>/`. On other agents, use the platform's normal writable artifact/output directory and attach the resulting file.
 
 The workbook must contain exactly:
 
@@ -122,4 +130,4 @@ Require all of the following:
 - The XLSX archive passes an integrity check.
 - Embedded-image count is reported.
 
-In the final answer, state the exact market/category/period, row counts, image coverage, and the 3–5 strongest merchant takeaways. Cite only the final workbook.
+In the final answer, state the exact market/category/period, row counts, image coverage, and the 3–5 strongest merchant takeaways. Attach or link only the final workbook; in Codex, cite only that workbook.

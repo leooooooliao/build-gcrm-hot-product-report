@@ -28,5 +28,5 @@ jobs:
         run: |
           gh release create "${GITHUB_REF_NAME}" \
             "build-gcrm-hot-product-report-${GITHUB_REF_NAME}.zip" \
-            --title "GCRM 品类爆品报告 ${GITHUB_REF_NAME}" \
-            --notes "下载并解压到 Codex skills 目录。Release 附件的 download_count 用作累计下载次数。"
+            --title "类目爆品报告 ${GITHUB_REF_NAME}" \
+            --notes "下载并解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。Release 附件的 download_count 用作累计下载次数。"

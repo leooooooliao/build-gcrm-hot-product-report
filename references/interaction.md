@@ -4,16 +4,16 @@
 
 Use one compact message:
 
-> 请给我 3 项信息：  
-> 1）国家：US / GB / DE / FR / IT / ES / IE / JP，或 SEA 汇总；SEA 也可选择 TH / ID / VN / PH / MY / SG。  
-> 2）一级类目：必须使用 GCRM Top Product 当前版本的准确类目名称（本 Skill 快照：2026-07-28），例如宠物用品、美妆个护、家居用品、运动与户外。  
-> 3）时间周期：例如最近30天，或 2026-06-25 至 2026-07-25。
+> 没问题，我来帮你做一份类目爆品报告。告诉我 3 项信息就行：
+> 1）国家：例如 US；东南亚可以选 SEA 汇总，或 TH / ID / VN / PH / MY / SG。
+> 2）一级类目：例如宠物用品、美妆个护、家居用品、运动与户外。这里使用 GCRM Top Product 当前版本的类目名称（本 Skill 快照：2026-07-28）。
+> 3）时间：例如最近30天，或 2026-06-25 至 2026-07-25。
 
 Ask only for missing fields.
 
 ## Exact-match response
 
-> 已确认：`<country> × <category> × <start> 至 <end>`。类目使用 GCRM Top Product 一级类目版本（快照 `<taxonomy_snapshot>`）。我将只拉这一份，不扩展到其他国家或类目。
+> 好的，这次看 `<country> × <category> × <start> 至 <end>`。类目按 GCRM Top Product 一级类目版本（快照 `<taxonomy_snapshot>`）执行；我只拉这一份，不扩展到其他国家或类目。
 
 ## Alias response
 
@@ -41,4 +41,3 @@ Keep updates short:
 4. Excel generated and verified.
 
 Do not narrate browser mechanics unless an interaction failed.
-
