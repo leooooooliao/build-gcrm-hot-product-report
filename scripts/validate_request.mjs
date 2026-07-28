@@ -21,6 +21,14 @@ function normalize(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+function groupedOptions(items, perLine = 5) {
+  const lines = [];
+  for (let index = 0; index < items.length; index += perLine) {
+    lines.push(items.slice(index, index + perLine).join(" / "));
+  }
+  return lines.join("\n");
+}
+
 function levenshtein(a, b) {
   const left = [...normalize(a)];
   const right = [...normalize(b)];
@@ -92,6 +100,21 @@ function validDate(value) {
 }
 
 const args = argsOf(process.argv.slice(2));
+const categoryOptionsText = groupedOptions(options.level_1_categories);
+if (Object.prototype.hasOwnProperty.call(args, "list-options")) {
+  console.log(JSON.stringify({
+    taxonomy_name: options.taxonomy_name,
+    taxonomy_snapshot: options.taxonomy_snapshot,
+    source_verified_at: options.source_verified_at,
+    country_options: options.countries.top_level,
+    sea_country_options: options.countries.sea_children,
+    category_count: options.level_1_categories.length,
+    category_options: options.level_1_categories,
+    category_options_text: categoryOptionsText,
+  }, null, 2));
+  process.exit(0);
+}
+
 const country = resolveCountry(args.country);
 const category = resolveCategory(args.category);
 const datesValid = validDate(args.start)
@@ -114,8 +137,11 @@ if (country.status === "invalid") {
   messages.push(`请确认使用 SEA 汇总，还是具体国家：${options.countries.sea_children.join(" / ")}。`);
 }
 
-if (category.status === "invalid") {
+if (category.status === "invalid" && !String(args.category ?? "").trim()) {
+  messages.push(`请选择一个准确的一级类目（共 ${options.level_1_categories.length} 个）：\n${categoryOptionsText}`);
+} else if (category.status === "invalid") {
   messages.push(`类目“${args.category}”不在当前版本中。最接近：${category.candidates.join(" / ")}。`);
+  messages.push(`当前完整一级类目（共 ${options.level_1_categories.length} 个）：\n${categoryOptionsText}`);
 } else if (category.status === "confirm_required") {
   messages.push(`类目输入“${args.category}”将映射为平台标签“${category.canonical}”，请确认。`);
 }
@@ -133,6 +159,8 @@ console.log(JSON.stringify({
   needs_confirmation: needsConfirmation,
   taxonomy_name: options.taxonomy_name,
   taxonomy_snapshot: options.taxonomy_snapshot,
+  source_verified_at: options.source_verified_at,
+  category_count: options.level_1_categories.length,
   country,
   category,
   period: { start: args.start ?? "", end: args.end ?? "", valid: datesValid },

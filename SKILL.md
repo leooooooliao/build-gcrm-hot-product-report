@@ -23,6 +23,14 @@ Require exactly three inputs:
 2. Exact current-version GCRM level-1 category.
 3. Date range.
 
+If the category is missing, or the user asks what categories are supported, run:
+
+```bash
+node scripts/validate_request.mjs --list-options
+```
+
+Show every item in `category_options_text` immediately. Do not show only examples, abbreviate the list, or ask the user to guess a label. If the user already supplied an exact valid category, do not repeat the full list.
+
 Run:
 
 ```bash
@@ -30,6 +38,8 @@ node scripts/validate_request.mjs --country "<input>" --category "<input>" --sta
 ```
 
 Always tell the user that category labels follow the GCRM Top Product taxonomy snapshot named in the validator output. Do not continue on an ambiguous or invalid category. Give at most three close candidates and ask the user to confirm the exact label.
+
+When a supplied category is invalid, show the three closest candidates first, then the complete current category list returned by the validator so the user can choose an exact label.
 
 Accept an alias only after showing the mapped platform label. Treat broad inputs such as `家居` as ambiguous because they may mean `家居用品`、`家具`、`家纺布艺` or `家装建材`.
 
