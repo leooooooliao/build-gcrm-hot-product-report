@@ -1,0 +1,4 @@
+node_modules
+*.previews/
+*.xlsx
+*.inspect.ndjson
