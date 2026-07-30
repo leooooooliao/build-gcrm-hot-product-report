@@ -18,6 +18,23 @@ If the host supports explicit skill identifiers, `$build-gcrm-hot-product-report
 
 Do not assume every user runs Codex. Do not instruct a non-Codex user to use `$CODEX_HOME` unless that environment actually exists.
 
+## Stable updates
+
+At the start of each invocation, run `scripts/check_for_updates.mjs`. Read
+`references/update-runbook.md` only when an update is available.
+
+- Use the platform's native Skill/extension updater when available.
+- Use only the configured repository's latest stable GitHub Release.
+- Require the matching SHA-256 asset before replacing an installed package.
+- Re-read the updated `SKILL.md` and resume the original request.
+- Do not recursively check again in the same request.
+- Treat an offline or rate-limited check as non-blocking.
+
+On chat-only platforms that cannot execute the checker, compare the installed
+version in `references/release.json` with the repository's latest stable Release.
+If the platform also cannot update files, provide the Release link once and
+continue with the installed version.
+
 ## Runtime capability
 
 Preferred path:

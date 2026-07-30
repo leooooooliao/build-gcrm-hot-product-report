@@ -12,6 +12,19 @@ Users do not need to remember the English skill identifier. Treat natural reques
 > 帮我做一份类目爆品报告吧：国家是 US，类目是宠物用品，时间看最近30天。
 
 Read `references/agent-compatibility.md` when installing or running outside Codex.
+Resolve every bundled script and reference relative to the directory containing this `SKILL.md`, regardless of the user's current working directory.
+
+## 0. Check for a stable update
+
+At the start of every invocation, run this once from the Skill directory before asking for report inputs:
+
+```bash
+node scripts/check_for_updates.mjs
+```
+
+If the result is `update_available`, read `references/update-runbook.md` and apply the verified stable Release before continuing. Re-read the updated `SKILL.md` once and do not restart the update check in the same request.
+
+If the check fails because GitHub or network access is unavailable, continue with the installed version. Never block a report on an update check, follow an unreleased branch, or overwrite a modified local Skill.
 
 ## 1. Resolve and validate the request
 
