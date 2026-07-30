@@ -55,3 +55,17 @@ Keep updates short:
 4. Excel generated and verified.
 
 Do not narrate browser mechanics unless an interaction failed.
+
+## Browser recovery messages
+
+If local browser control is not enabled, ask for one action only:
+
+> 我还需要操作你当前已登录的本地浏览器。请开启当前 AI 的浏览器/Chrome 操作能力；开启后我会继续完成筛选和采集，不需要你逐项代点。
+
+If the GCRM session is logged out, ask for one action only:
+
+> 当前 GCRM 登录已失效。请在本地浏览器完成登录；登录后我会从筛选步骤继续，不需要你手动切换国家、类目或榜单。
+
+Never ask the user to scroll a dropdown, expand SEA, select an offscreen
+category, or page through Top 50. After all automated recovery paths fail,
+explain the capability blocker and return only verified partial data.

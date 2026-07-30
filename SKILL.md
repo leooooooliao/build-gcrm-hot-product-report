@@ -47,11 +47,25 @@ If the user gives `SEA`, ask whether they want the SEA aggregate or one of `TH /
 
 ## 2. Collect only the requested slice
 
+Read `references/browser-runbook.md`. Build the deterministic filter plan:
+
+```bash
+node scripts/build_filter_plan.mjs \
+  --country "<confirmed country>" \
+  --category "<confirmed exact level-1 category>"
+```
+
 Open the internal GCRM Top Product page in the user's authenticated browser session:
 
 `https://mmm.tiktok-row.net/gcrm_overseas/phoenix/marketing-advisor/product-insights/top-product`
 
-Set the confirmed country, category, and period in the UI before collecting data. Confirm that the visible page state matches all three inputs.
+Follow the plan's fixed order: country first, then the single level-1 category, then the exact dates, then save and wait. Country and Category are custom TreeSelect/Cascader controls, not native `<select>` elements.
+
+When a target is offscreen or virtualized, use an exact DOM locator so the browser auto-scrolls inside the open overlay. If that fails, scroll only inside the visible dropdown; never treat page-body scrolling as a substitute. Expand SEA before selecting TH / ID / VN / PH / MY / SG.
+
+The user may be asked once to enable browser control or log in. Never ask the user to scroll, expand SEA, or repeatedly select countries, categories, banners, or pages. If all safe paths fail, return partial results with `collection_blocked`; never describe a filter failure as “no data”.
+
+After saving, re-read the visible country, the single selected level-1 category, the exact dates, and numeric result rows. A successful click is not a completed filter.
 
 Collect at most:
 
@@ -67,9 +81,12 @@ Use this acquisition order:
 1. Prefer a page API/XHR response when it exposes the full table and image URLs.
 2. Otherwise use the page export for product IDs, names, shops, categories, and image URLs; read the missing GMV/channel intervals from the page or its data response.
 3. Join export and page values by `product_id`. Use normalized title plus shop only as a fallback and label the join as uncertain.
-4. Use screenshots only for a small number of recommended products when no image URL can be obtained.
+4. Otherwise use structured DOM extraction with page size 50/100 or deterministic pagination until rank 50 or the final available row.
+5. Use screenshots only for a small number of recommended products when no image URL can be obtained.
 
 Never claim a title-only match is a confirmed product match.
+
+For every banner, verify that ranks are unique and ascending, no unexplained gaps exist, and the final collected count is at most 50 or equals all available rows. Do not visually scroll through 50 rows when a structured acquisition path is available.
 
 ## 3. Normalize and analyze
 

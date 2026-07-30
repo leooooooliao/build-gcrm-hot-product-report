@@ -35,6 +35,24 @@ Portable path:
 
 If the host lacks `@oai/artifact-tool`, it may use an equivalent XLSX-capable tool permitted by that environment. It must still render or open every sheet for visual QA and scan formulas for errors.
 
+## Browser capability
+
+Read `references/browser-runbook.md` before live collection and run
+`scripts/build_filter_plan.mjs` for the confirmed country and category.
+
+- `get_tabs` or opening the page only proves discovery, not completed filtering.
+- Country and Category are custom TreeSelect/Cascader controls; do not use a
+  native `<select>` command.
+- Prefer exact DOM locators, which can auto-scroll inside an open overlay.
+- A visual-only fallback must scroll the dropdown overlay, not the page body.
+- For SEA child countries, expand SEA and take a fresh snapshot before retrying.
+- Prefer XHR/API, export, or pagination over visually scrolling 50 table rows.
+
+The user may be asked once for browser permission or login. Do not ask the user
+to manually scroll or repeatedly switch country, category, banner, or page. If
+the host cannot complete those actions, return a clearly marked partial result
+instead of claiming no data.
+
 ## Access boundary
 
 The GitHub repository may be public, but the GCRM source page remains access-controlled. Public access to the skill does not grant access to company data. Never request or store a user's company password, cookies, or session tokens.
