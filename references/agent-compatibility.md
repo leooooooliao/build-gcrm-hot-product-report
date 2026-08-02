@@ -48,9 +48,14 @@ Portable path:
 
 - Use the host's native browser and spreadsheet tooling.
 - Preserve the same JSON contract, four-sheet workbook structure, formulas, styling, image policy, and verification requirements.
+- Preserve the displayed average price, midpoint-estimated TR, single action-label system, and concise Feishu-brief contract.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
 
 If the host lacks `@oai/artifact-tool`, it may use an equivalent XLSX-capable tool permitted by that environment. It must still render or open every sheet for visual QA and scan formulas for errors.
+
+If the host cannot write Feishu documents, it must still generate the portable
+XML brief with `scripts/build_feishu_brief.mjs`, report the limitation clearly,
+and never pretend that a live document was created.
 
 ## Browser capability
 

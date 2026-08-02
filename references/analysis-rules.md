@@ -8,7 +8,7 @@ Use individual products as evidence, but recommend at the actionable product-arc
 
 Every recommendation must contain this evidence chain:
 
-1. `数据事实`: rank, current GMV interval, change, and channel share.
+1. `数据事实`: rank, current GMV interval, change, displayed average price, midpoint-estimated TR, and channel share.
 2. `商品解释`: the product pain point or observable use scenario.
 3. `内容判断`: why live or video can demonstrate it.
 4. `执行门槛`: logistics, installation, after-sales, safety, compliance, or low-base risk.
@@ -57,6 +57,21 @@ Use these execution implications:
 - Video-driven: favor strong visual proof, before/after, installation, reaction, or problem-solution content.
 - Live-driven: require a clear demonstration script, objection handling, and adequate host expertise.
 - Mixed/other: do not force a live or video narrative.
+
+## Average price and take rate
+
+- Average price is a mandatory source metric. Read the displayed GCRM value; do
+  not recalculate it from independently blurred GMV and order intervals.
+- `TR（估） = ads-cost interval midpoint / total-GMV interval midpoint`.
+- Show TR as a one-decimal percentage and keep its estimate label everywhere.
+- Use TR to discuss approximate paid-traffic intensity and economics, not as an
+  exact profitability measure.
+- Do not invent a universal “good TR” threshold. Interpret it together with
+  current scale, growth, ticket size, content driver, refund risk, and the
+  merchant's actual margin.
+- A high-growth product with a visibly high TR may be paid-traffic-dependent;
+  require an organic-content or margin gate before scaling.
+- A low TR does not prove organic demand when attribution or the source range is incomplete.
 
 ## Category opportunity
 
@@ -113,6 +128,7 @@ Never state that weather, holidays, trends, or user preferences caused growth un
 - Live share above 50% plus high ticket: require a live capability and after-sales gate.
 - Health, food, supplement, pesticide, medical, safety, or efficacy claims: require compliance review.
 - Missing channel intervals: use `混合/其他`; do not guess a channel driver.
+- Missing displayed average price, ads cost, or total GMV: do not recommend the product or complete delivery.
 - Qualitative claims must not introduce exact numbers absent from the source.
 
 ## Output restraint
@@ -123,3 +139,11 @@ Never state that weather, holidays, trends, or user preferences caused growth un
 - Seven level-2 category rows maximum.
 - No median discussion unless the user explicitly requests it.
 - Preserve raw evidence and uncertainty.
+
+## Feishu brief
+
+Use the workbook recommendation IDs as the single source of truth. The Feishu
+brief normally contains at most two benchmark products and up to six growth
+products. Do not repeat the Top 50 table. For each retained product, show the
+Chinese name, image when available, action, GMV/change, displayed average price,
+`TR（估）`, live/video mix, driver, and one concise reason/action paragraph.

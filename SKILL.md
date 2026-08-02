@@ -87,6 +87,14 @@ Collect at most:
 - 广告消耗 Top 50
 - 飙升 Top 50, or every available row when fewer than 50 exist
 
+For every collected row, treat total GMV, live/video/product-card GMV,
+order volume, the displayed average price (`avg_price`), ads cost, product ID,
+title, shop, categories, and image URL when available as mandatory source
+fields. Do not replace the displayed average price with `GMV / orders`.
+
+If a recommended product is missing `avg_price`, `ads_cost`, or total GMV,
+complete delivery is blocked until the source is collected again.
+
 Do not collect other markets or categories as samples.
 
 Use this acquisition order:
@@ -109,8 +117,11 @@ Create one JSON input matching the contract. Preserve blurred intervals exactly 
 
 - `直播占比 = 直播GMV区间中点 / 总GMV区间中点`
 - `短视频占比 = 短视频GMV区间中点 / 总GMV区间中点`
+- `TR（估） = 广告消耗区间中点 / 总GMV区间中点`
 
-The shares are estimates and may not sum to 100% because each source range is independently blurred.
+Display TR and channel shares as one-decimal percentages. They are estimates;
+channel shares may not sum to 100% because each source range is independently
+blurred. Keep the label `TR（估）` and never present it as a precise take rate.
 
 Create one concise Chinese product name for every unique collected product. Deduplicate by `product_id`, translate once, and store the result in `product_translations`. Then run:
 
@@ -119,6 +130,16 @@ node scripts/validate_translations.mjs --input "<report-spec.json>"
 ```
 
 Do not build the workbook until the validator reports zero missing or invalid translations.
+
+Run the mandatory metric and recommendation-label gate:
+
+```bash
+node scripts/validate_metrics.mjs --input "<report-spec.json>"
+```
+
+Do not continue until it reports `valid: true`. This gate checks rank integrity,
+the displayed average price, ads cost, total GMV, midpoint TR, recommendation
+IDs, the single action-label system, and exactly three conclusion bullets.
 
 Before writing conclusions, run:
 
@@ -135,6 +156,15 @@ Prepare:
 - Eight to ten high-growth or next-wave products.
 - One short qualitative insight per recommended product.
 - Category opportunity actions based on the GMV Top 50.
+
+Use only one merchant-facing label field, `建议动作`:
+
+- `快速跟进`: scale and growth are credible, the use case is clear, and the product archetype is quickly copyable.
+- `条件跟进`: the opportunity is credible but depends on live, supply-chain, after-sales, or compliance capability.
+- `小单测试`: growth is promising but scale, base, or persistence is not yet proven.
+- `仅作标杆`: useful for learning product/price/content design but not a direct sourcing recommendation.
+
+Do not create overlapping fields such as `机会标签`, `建议级别`, or `优先关注`.
 
 Label non-data explanations with `推测`. Focus on seasonality, product pain point, content demonstrability, logistics/after-sales, safety, and compliance. Do not pad the report with medians or descriptive statistics that do not change a merchant decision.
 
@@ -165,19 +195,57 @@ Keep the established visual contract:
 - Green font for increases; red font for decreases.
 - Product names stay on one line and clip instead of creating tall rows.
 - Show `中文商品简称` next to the original product title on the conclusion, selection-pool, and raw-data sheets.
+- Show the source-page average price and midpoint-estimated TR on conclusion, selection-pool, and raw-data sheets.
 - Embed images for the selection pool and recommended products when available.
 - No decorative charts, KPI cards, heavy fills, or excessive borders.
 - Keep raw data and formulas auditable.
 
-## 5. Verify and hand off
+## 5. Build the concise Feishu recommendation brief
+
+The second required deliverable is a concise Feishu document generated from the
+same `report-spec.json`. It is not a copy of the workbook and must not contain a
+Top 50 table.
+
+Run:
+
+```bash
+node scripts/build_feishu_brief.mjs \
+  --input "<report-spec.json>" \
+  --output "<feishu-brief.xml>" \
+  --excel-name "<output.xlsx>"
+```
+
+The brief must contain only:
+
+1. Market, exact GCRM level-1 category, period, and taxonomy snapshot.
+2. The same three conclusion bullets as the workbook.
+3. Six to eight strongest recommendations by default: at most two benchmarks and up to six growth products. Use fewer rather than weaken evidence gates.
+4. For every recommendation: small image when available, Chinese name, action, GMV interval/change, displayed average price, `TR（估）`, live/video shares, driver, and one concise recommendation paragraph.
+5. The four action definitions.
+6. A link or attachment to the complete Excel report.
+
+Create the document with the host's authenticated Feishu/Lark document tool. If
+the host lacks Feishu write capability, still generate the XML and explain that
+the user must import it; never claim a Feishu document was created. After
+creation, fetch it again and verify the scope, three bullets, recommendation
+count, average prices, TR values, action definitions, and Excel reference
+against the JSON/workbook.
+
+## 6. Verify and hand off
 
 Require all of the following:
 
 - Formula-error scan returns zero matches.
 - Translation validation returns zero missing or invalid Chinese names.
+- Metric validation returns `valid: true`.
 - Each sheet is rendered and visually checked.
 - Key conclusion values reconcile with the GMV Top 50 source.
 - The XLSX archive passes an integrity check.
 - Embedded-image count is reported.
+- Feishu XML is generated from the same recommendation IDs as the workbook.
+- The created Feishu document is fetched and reconciled, or a clear Feishu capability blocker is reported.
 
-In the final answer, state the exact market/category/period, row counts, image coverage, and the 3–5 strongest merchant takeaways. Attach or link only the final workbook; in Codex, cite only that workbook.
+In the final answer, state the exact market/category/period, row counts, image
+coverage, Feishu recommendation count, and the 3–5 strongest merchant
+takeaways. Attach or link the final workbook and Feishu document; do not expose
+intermediate JSON/XML unless Feishu creation is blocked.

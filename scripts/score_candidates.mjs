@@ -81,8 +81,10 @@ const enriched = [...rowsById.values()].map((row) => {
   const live = metric(row.gmv_live);
   const video = metric(row.gmv_video);
   const price = metric(row.avg_price);
+  const ads = metric(row.ads_cost);
   const liveShare = total.mid && live.mid != null ? live.mid / total.mid : null;
   const videoShare = total.mid && video.mid != null ? video.mid / total.mid : null;
+  const takeRate = total.mid && ads.mid != null ? ads.mid / total.mid : null;
   let driver = "混合/其他";
   if (liveShare >= 0.5 && liveShare > videoShare) driver = "直播驱动";
   if (videoShare >= 0.5 && videoShare > liveShare) driver = "短视频驱动";
@@ -95,6 +97,8 @@ const enriched = [...rowsById.values()].map((row) => {
     video_share: videoShare,
     driver,
     price_mid: price.mid,
+    ads_mid: ads.mid,
+    take_rate: takeRate,
     in_rising: risingIds.has(String(row.product_id)),
   };
 });
@@ -157,6 +161,10 @@ function publicItem(item) {
     gmv_range: metric(item.row.gmv_total).range,
     gmv_change: rounded(item.change),
     gmv_midpoint: rounded(item.total_mid, 0),
+    average_price: rounded(item.price_mid, 2),
+    ads_cost_range: metric(item.row.ads_cost).range,
+    ads_cost_midpoint: rounded(item.ads_mid, 0),
+    take_rate_estimate: rounded(item.take_rate),
     live_share: rounded(item.live_share),
     video_share: rounded(item.video_share),
     driver: item.driver,

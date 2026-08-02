@@ -51,8 +51,8 @@ Keep updates short:
 
 1. Filters confirmed.
 2. Banners and row counts collected.
-3. Images and metrics matched.
-4. Excel generated and verified.
+3. Images, average price, ads cost, midpoint TR, and channel metrics matched.
+4. Excel and concise Feishu recommendation brief generated and reconciled.
 
 Do not narrate browser mechanics unless an interaction failed.
 
