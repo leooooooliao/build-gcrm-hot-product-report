@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { buildDeliveryManifest } from "./delivery_contract.mjs";
 
 const banners = ["GMV Top 50", "销量 Top 50", "广告消耗 Top 50", "飙升 Top 50"];
-const allowedActions = new Set(["快速跟进", "条件跟进", "小单测试", "仅作标杆"]);
 
 function argsOf(argv) {
   const result = {};
@@ -110,72 +110,42 @@ for (const { banner, row } of allRows) {
   }
 }
 
-const candidateIds = new Set(
-  [
-    ...(spec.rankings?.["GMV Top 50"] || []),
-    ...(spec.rankings?.["飙升 Top 50"] || []),
-  ].filter((row) => row.product_id).map((row) => String(row.product_id)),
-);
-const rowsById = new Map(
-  allRows
-    .filter(({ row }) => row.product_id)
-    .map(({ row }) => [String(row.product_id), row]),
-);
 const recommendations = [
   ...(spec.recommendations?.benchmarks || []),
   ...(spec.recommendations?.growth || []),
 ];
-const recommendationIds = recommendations.map((item) => String(item.product_id || ""));
-if (new Set(recommendationIds).size !== recommendationIds.length) {
-  errors.push("recommendations: duplicate product_id values are not allowed");
-}
-if ((spec.recommendations?.benchmarks || []).length > 4) {
-  errors.push("recommendations.benchmarks: maximum is 4");
-}
-if ((spec.recommendations?.growth || []).length > 10) {
-  errors.push("recommendations.growth: maximum is 10");
-}
-
-for (const item of recommendations) {
-  const id = String(item.product_id || "");
-  if (!id) {
-    errors.push("recommendation: product_id is required");
-    continue;
-  }
-  if (!candidateIds.has(id)) errors.push(`recommendation ${id}: not in GMV Top 50 or 飙升 Top 50`);
-  if (!allowedActions.has(item.action)) errors.push(`recommendation ${id}: invalid action ${item.action}`);
-  const row = rowsById.get(id);
-  if (!row) continue;
-  const gmv = midpoint(row.gmv_total);
-  const price = midpoint(row.avg_price);
-  const ads = midpoint(row.ads_cost);
-  const tr = gmv > 0 && Number.isFinite(ads) && ads >= 0 ? ads / gmv : null;
-  if (!(Number.isFinite(price) && price >= 0)) errors.push(`recommendation ${id}: 客单价 is required`);
-  if (!Number.isFinite(tr)) errors.push(`recommendation ${id}: TR cannot be calculated`);
+let deliveryManifest = null;
+try {
+  deliveryManifest = buildDeliveryManifest(spec);
+} catch (error) {
+  errors.push(`delivery_manifest: ${error.message}`);
 }
 
 if (!Array.isArray(spec.summary_bullets) || spec.summary_bullets.length !== 3) {
   errors.push("summary_bullets: exactly three concise conclusions are required");
 }
 
-const sample = recommendations.slice(0, 8).map((item) => {
-  const row = rowsById.get(String(item.product_id));
-  const gmv = midpoint(row?.gmv_total);
-  const ads = midpoint(row?.ads_cost);
-  return {
-    product_id: String(item.product_id),
-    average_price: midpoint(row?.avg_price),
-    take_rate_estimate: gmv > 0 && Number.isFinite(ads) && ads >= 0
-      ? Number((ads / gmv).toFixed(4))
-      : null,
-  };
-});
+const sample = (deliveryManifest?.recommendations || []).map((item) => ({
+  position: item.position,
+  group: item.group,
+  product_id: item.product_id,
+  source_banner: item.source_banner,
+  source_rank: item.source_rank,
+  gmv_range: item.metrics.gmv_range,
+  gmv_change: item.metrics.gmv_change,
+  average_price: item.metrics.average_price,
+  take_rate_estimate: item.metrics.take_rate_estimate,
+  live_share: item.metrics.live_share,
+  video_share: item.metrics.video_share,
+}));
 
 const result = {
   valid: errors.length === 0,
   metric_contract: "TR（估）=广告消耗区间中点/总GMV区间中点；客单价直接取网页展示值",
   collected_rows: allRows.length,
   recommendations: recommendations.length,
+  delivery_id: deliveryManifest?.delivery_id || null,
+  recommendation_ids: deliveryManifest?.recommendation_ids || [],
   recommendation_metric_sample: sample,
   errors,
 };

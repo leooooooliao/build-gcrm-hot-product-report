@@ -1,8 +1,21 @@
 # Feishu delivery runbook
 
 Use this runbook only after the report JSON, metrics, translations,
-recommendation labels, and local spreadsheet structure have passed validation.
+recommendation labels, exact 2+6 delivery manifest, and local spreadsheet
+structure have passed validation.
 The normal final handoff is one Feishu Sheet plus one concise Feishu document.
+
+Before creating either artifact, require:
+
+```bash
+node scripts/build_delivery_manifest.mjs \
+  --input "<report-spec.json>" \
+  --output "<delivery-manifest.json>"
+```
+
+This manifest is the only recommendation source for both artifacts. Never build
+one artifact from GMV rows and the other from a newly constructed GMV/rising
+map. Do not expose either live URL until section 5 reconciliation passes.
 
 ## 1. Detect capability and identity
 
@@ -28,8 +41,10 @@ Use the deterministic path below so a weaker agent does not redesign the report:
 5. If the workbook contains formulas, run the host's whole-workbook formula
    verifier. `success` is required; `partial` is not success.
 6. Read back the title/header areas and representative first/last rows from every
-   sheet. Reconcile row counts, product IDs, average price, TR, live/video shares,
-   and recommendation IDs with `report-spec.json`.
+   sheet. The first eight `选品池` rows must match the manifest order and contain
+   the delivery position, recommendation type, Product ID, source banner/rank,
+   Chinese name, archetype, action, insight, GMV/change, average price, TR,
+   live/video shares, driver, and delivery ID.
 
 If import is unavailable but native Sheet creation is available, reproduce the
 same four sheets with typed data and native styles. Do not flatten numeric fields
@@ -68,15 +83,39 @@ node scripts/build_feishu_brief.mjs \
 Create the document with the authenticated user identity. The final `完整数据`
 section must show a visible link card named `查看完整飞书电子表格`; do not attach
 the intermediate XLSX. Keep the document limited to the period/category/market,
-three conclusions, six to eight strongest recommendations, action definitions,
-and the metric-method note.
+three conclusions, the same eight recommendations from the fixed 2+6 manifest,
+action definitions, and the metric-method note.
 
 Fetch the document again and verify the Sheet URL, three conclusions,
-recommendation count, recommendation IDs/names, average price, TR, channel mix,
-images, and action definitions.
+recommendation count, recommendation IDs/names, canonical source banner/rank,
+average price, TR, channel mix, images, action definitions, and delivery ID.
 
-## 5. Handoff
+## 5. Mandatory reconciliation
+
+Normalize the online Sheet readback and the fetched Feishu document into two
+JSON files using the exact `Delivery readback contract` in
+`references/data-contract.md`. Read the Sheet from the first eight `选品池`
+rows; do not reconstruct it from the raw ranking tabs. Read all eight document
+recommendations, including the Product ID and source line printed under each
+name.
+
+Run:
+
+```bash
+node scripts/reconcile_delivery.mjs \
+  --manifest "<delivery-manifest.json>" \
+  --sheet "<sheet-readback.json>" \
+  --brief "<brief-readback.json>"
+```
+
+Require `valid: true`. On failure, repair the incorrect artifact from the
+manifest, read it back again, and rerun the command. Do not send draft URLs,
+create a second independent recommendation calculation, or ask the user to
+decide which artifact is correct.
+
+## 6. Handoff
 
 Return both live URLs. State market, exact category path and level, period, online row
-counts, image coverage, formula-verification result, and recommendation count.
+counts, image coverage, formula-verification result, recommendation count, and
+the shared delivery ID.
 Never expose the intermediate XLSX unless the online delivery failed.
