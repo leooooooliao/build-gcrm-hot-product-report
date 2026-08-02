@@ -60,6 +60,23 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
 
 Keep every numeric interval and change on separate lines exactly as displayed. Use strings for product IDs.
 
+`avg_price` is the average-price value displayed by GCRM. Preserve that source
+value and its change; do not derive it from GMV and order intervals.
+
+Required calculated metrics:
+
+- `直播占比（估） = 直播GMV区间中点 / 总GMV区间中点`
+- `短视频占比（估） = 短视频GMV区间中点 / 总GMV区间中点`
+- `TR（估） = 广告消耗区间中点 / 总GMV区间中点`
+
+Round only the displayed percentage to one decimal. Keep unrounded numbers for
+formula audit. Because both inputs are blurred intervals, TR must always retain
+the `（估）` suffix.
+
+Every collected row must have parseable `gmv_total`, `avg_price`, and
+`ads_cost`. For recommended products, missing any one is a hard error; do not
+emit a complete report.
+
 ## Chinese product-name mapping
 
 `product_translations` is required. Key it by `product_id` and provide one concise Chinese product name for every unique product across all collected rankings. If a source row legitimately has no product ID, use the exact fallback key `shop_name|product_name`.
@@ -95,3 +112,7 @@ Allowed actions:
 - `小单测试`
 
 Each recommendation ID must exist in `GMV Top 50` or `飙升 Top 50`.
+
+These are the only merchant-facing classification labels. Do not add parallel
+fields such as `机会标签`, `建议级别`, `优先关注`, or `观察`. Non-recommended
+selection-pool rows use `—` in `建议动作`.

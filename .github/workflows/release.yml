@@ -14,19 +14,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const release = JSON.parse(fs.readFileSync("references/release.json", "utf8"));
+            const expected = `v${release.installed_version}`;
+            if (process.env.RELEASE_TAG !== expected) {
+              throw new Error(`Tag ${process.env.RELEASE_TAG} does not match ${expected}`);
+            }
+          '
+
       - name: Package the skill
         run: |
           mkdir -p package/build-gcrm-hot-product-report
           cp SKILL.md package/build-gcrm-hot-product-report/
           cp -R agents scripts references package/build-gcrm-hot-product-report/
           cd package
-          zip -r "../build-gcrm-hot-product-report-${GITHUB_REF_NAME}.zip" build-gcrm-hot-product-report
+          zip -r "../build-gcrm-hot-product-report.zip" build-gcrm-hot-product-report
+
+      - name: Create checksum
+        run: |
+          sha256sum "build-gcrm-hot-product-report.zip" \
+            > "build-gcrm-hot-product-report.zip.sha256"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            "build-gcrm-hot-product-report-${GITHUB_REF_NAME}.zip" \
+            "build-gcrm-hot-product-report.zip" \
+            "build-gcrm-hot-product-report.zip.sha256" \
             --title "类目爆品报告 ${GITHUB_REF_NAME}" \
-            --notes "下载并解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。Release 附件的 download_count 用作累计下载次数。"
+            --notes "下载 build-gcrm-hot-product-report.zip 并校验同名 SHA-256 后解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。从 v1.4.0 起，Skill 每次调用都会检查此仓库的最新稳定 Release；v1.3.0 及更早版本需要先手动升级一次。ZIP 附件的 download_count 会同时包含新安装和版本更新，不等于独立用户数；校验文件下载不计入安装统计。"
