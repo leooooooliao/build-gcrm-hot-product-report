@@ -83,7 +83,7 @@ async function check() {
         ? "local_ahead"
         : "up_to_date";
     const tag = `v${latestVersion}`;
-    const packageName =
+    const packageName = releaseConfig.release_asset_name ||
       `${releaseConfig.release_asset_prefix}${tag}.zip`;
     const checksumName = `${packageName}.sha256`;
     const packageAsset = findAsset(release, packageName);

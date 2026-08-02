@@ -37,6 +37,12 @@ Prefer the host's native Skill or extension updater. Otherwise:
    unmodified. Preserve a recoverable backup until the new Skill loads.
 6. Re-read the updated `SKILL.md`, then continue the original request.
 
+Always download the ZIP through its GitHub Release asset URL. Do not substitute
+`git clone`, a source archive, or individually fetched raw files: those paths do
+not increment the package download counter. The ZIP asset's GitHub
+`download_count` is the automatic installation/update proxy; checksum downloads
+are excluded from reporting.
+
 Do not silently overwrite a dirty Git checkout, a locally modified Skill, a
 symlinked development copy, or a directory outside the host's approved Skill
 location. In those cases, report the latest Release URL in one concise message

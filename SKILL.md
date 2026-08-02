@@ -1,6 +1,6 @@
 ---
 name: build-gcrm-hot-product-report
-description: Generate a concise merchant-facing GCRM hot-product Excel report for one country, one current GCRM level-1 category, and one date range. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片和中英文商品名的 Excel。
+description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
 ---
 
 # 类目爆品报告
@@ -168,7 +168,7 @@ Do not create overlapping fields such as `机会标签`, `建议级别`, or `优
 
 Label non-data explanations with `推测`. Focus on seasonality, product pain point, content demonstrability, logistics/after-sales, safety, and compliance. Do not pad the report with medians or descriptive statistics that do not change a merchant decision.
 
-## 4. Build the workbook
+## 4. Build the verified spreadsheet source
 
 Prefer the bundled Node runtime and `@oai/artifact-tool` paths when the host provides them. In Codex, use paths returned by `load_workspace_dependencies` and create `node_modules` as a symlink to the returned bundled directory in a writable task directory.
 
@@ -178,9 +178,15 @@ Run:
 node scripts/build_report.mjs --input "<report-spec.json>" --output "<output.xlsx>" --preview-dir "<preview-dir>"
 ```
 
-If the host does not provide `@oai/artifact-tool`, use its native spreadsheet/file tools to reproduce the workbook contract below. Do not pretend the bundled script ran. If the host cannot create or visually verify XLSX files, return the normalized JSON and explain the capability blocker instead of fabricating a workbook.
+If the host does not provide `@oai/artifact-tool`, use its native Feishu Sheet
+tools to reproduce the four-sheet contract directly with typed data and native
+styles. Do not pretend the bundled script ran. Only fall back to normalized JSON
+when the host can create and verify neither the online sheet nor an XLSX transfer
+artifact.
 
-In Codex, write the final workbook under `outputs/<thread_id>/`. On other agents, use the platform's normal writable artifact/output directory and attach the resulting file.
+Treat this XLSX as a verified transfer artifact for Feishu, not the normal final
+user deliverable. In Codex, write it under `outputs/<thread_id>/`. On other
+agents, use the platform's normal temporary or artifact directory.
 
 The workbook must contain exactly:
 
@@ -200,11 +206,19 @@ Keep the established visual contract:
 - No decorative charts, KPI cards, heavy fills, or excessive borders.
 - Keep raw data and formulas auditable.
 
-## 5. Build the concise Feishu recommendation brief
+## 5. Publish the Feishu Sheet and recommendation document
 
-The second required deliverable is a concise Feishu document generated from the
-same `report-spec.json`. It is not a copy of the workbook and must not contain a
-Top 50 table.
+Read `references/feishu-delivery.md`. The two normal final deliverables are:
+
+1. A polished Feishu Sheet containing the complete four-sheet report.
+2. A concise Feishu document generated from the same `report-spec.json` and
+   linked to that Feishu Sheet. It is not a copy of the full table and must not
+   contain a Top 50 table.
+
+Use the host's authenticated Feishu/Lark Sheets capability. Prefer importing the
+verified XLSX with the native workbook-import operation, then inspect and repair
+the online result with native sheet operations. Do not attach the XLSX to the
+document when the Feishu Sheet was created successfully.
 
 Run:
 
@@ -212,24 +226,27 @@ Run:
 node scripts/build_feishu_brief.mjs \
   --input "<report-spec.json>" \
   --output "<feishu-brief.xml>" \
-  --excel-name "<output.xlsx>"
+  --sheet-url "<created Feishu Sheet URL>"
 ```
 
 The brief must contain only:
 
 1. Market, exact GCRM level-1 category, period, and taxonomy snapshot.
-2. The same three conclusion bullets as the workbook.
+2. The same three conclusion bullets as the Feishu Sheet.
 3. Six to eight strongest recommendations by default: at most two benchmarks and up to six growth products. Use fewer rather than weaken evidence gates.
 4. For every recommendation: small image when available, Chinese name, action, GMV interval/change, displayed average price, `TR（估）`, live/video shares, driver, and one concise recommendation paragraph.
 5. The four action definitions.
-6. A link or attachment to the complete Excel report.
+6. A visible link card to the complete Feishu Sheet.
 
-Create the document with the host's authenticated Feishu/Lark document tool. If
-the host lacks Feishu write capability, still generate the XML and explain that
-the user must import it; never claim a Feishu document was created. After
-creation, fetch it again and verify the scope, three bullets, recommendation
-count, average prices, TR values, action definitions, and Excel reference
-against the JSON/workbook.
+Create the document with the host's authenticated Feishu/Lark document tool.
+After creation, fetch it again and verify the scope, three bullets,
+recommendation count, average prices, TR values, action definitions, and Feishu
+Sheet link against the JSON and online sheet.
+
+If the host cannot write Feishu Sheets or documents, return the verified XLSX
+and portable XML as an explicit fallback. Never claim a live Feishu artifact was
+created, and never weaken the data or validation contract merely because the
+preferred delivery channel is unavailable.
 
 ## 6. Verify and hand off
 
@@ -242,10 +259,13 @@ Require all of the following:
 - Key conclusion values reconcile with the GMV Top 50 source.
 - The XLSX archive passes an integrity check.
 - Embedded-image count is reported.
-- Feishu XML is generated from the same recommendation IDs as the workbook.
-- The created Feishu document is fetched and reconciled, or a clear Feishu capability blocker is reported.
+- The Feishu Sheet contains exactly the expected four sheets and is read back.
+- Formula verification on the Feishu Sheet returns `status: success` when the imported workbook contains formulas.
+- Header style, clipped product names, increase/decrease colors, row counts, and image coverage are checked online.
+- Feishu XML is generated from the same recommendation IDs as the sheet.
+- The created Feishu document is fetched and reconciled, including its Feishu Sheet link, or a clear Feishu capability blocker is reported.
 
 In the final answer, state the exact market/category/period, row counts, image
 coverage, Feishu recommendation count, and the 3–5 strongest merchant
-takeaways. Attach or link the final workbook and Feishu document; do not expose
-intermediate JSON/XML unless Feishu creation is blocked.
+takeaways. Link the final Feishu Sheet and Feishu document; do not expose the
+intermediate XLSX/JSON/XML unless Feishu creation is blocked.

@@ -14,7 +14,7 @@ If the host supports explicit skill identifiers, `$build-gcrm-hot-product-report
 
 1. If the host supports installable skill folders, install the complete `build-gcrm-hot-product-report` directory in that host's documented skills directory.
 2. If the host supports project instructions but not skills, use `SKILL.md` as the project/runbook instruction and keep `references/` and `scripts/` beside it.
-3. If the host is a chat-only interface with no authenticated browser or file tools, do not claim the full workflow is installed. Explain that it can analyze uploaded exports but cannot independently open GCRM or generate the verified workbook.
+3. If the host is a chat-only interface with no authenticated browser or file tools, do not claim the full workflow is installed. Explain that it can analyze uploaded exports but cannot independently open GCRM or generate the verified Feishu deliverables.
 
 Do not assume every user runs Codex. Do not instruct a non-Codex user to use `$CODEX_HOME` unless that environment actually exists.
 
@@ -25,6 +25,8 @@ At the start of each invocation, run `scripts/check_for_updates.mjs`. Read
 
 - Use the platform's native Skill/extension updater when available.
 - Use only the configured repository's latest stable GitHub Release.
+- Download the Release ZIP asset even on the first installation; do not install
+  via clone, source archive, or individually fetched raw files.
 - Require the matching SHA-256 asset before replacing an installed package.
 - Re-read the updated `SKILL.md` and resume the original request.
 - Do not recursively check again in the same request.
@@ -40,22 +42,26 @@ continue with the installed version.
 Preferred path:
 
 - Node.js
-- `@oai/artifact-tool`
+- `@oai/artifact-tool` when a verified XLSX transfer artifact is needed
 - `sharp`
 - authenticated browser access to GCRM
+- authenticated Feishu/Lark Sheets and document write access
 
 Portable path:
 
 - Use the host's native browser and spreadsheet tooling.
-- Preserve the same JSON contract, four-sheet workbook structure, formulas, styling, image policy, and verification requirements.
+- Preserve the same JSON contract, four-sheet Feishu Sheet structure, formulas, styling, image policy, and verification requirements.
 - Preserve the displayed average price, midpoint-estimated TR, single action-label system, and concise Feishu-brief contract.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
 
-If the host lacks `@oai/artifact-tool`, it may use an equivalent XLSX-capable tool permitted by that environment. It must still render or open every sheet for visual QA and scan formulas for errors.
+If the host lacks `@oai/artifact-tool`, it may create the online Feishu Sheet
+directly with typed data and native styles. If it uses an XLSX transfer artifact,
+it must import it with the native Feishu workbook-import operation, then read the
+online result back and repair any style or image drift with native Sheet tools.
 
-If the host cannot write Feishu documents, it must still generate the portable
-XML brief with `scripts/build_feishu_brief.mjs`, report the limitation clearly,
-and never pretend that a live document was created.
+If the host cannot write Feishu Sheets or documents, it must still generate the
+verified XLSX and portable XML brief, report the limitation clearly, and never
+pretend that a live artifact was created.
 
 ## Browser capability
 
@@ -83,4 +89,8 @@ The GitHub repository may be public, but the GCRM source page remains access-con
 
 Use this prompt:
 
-> 请从 GitHub Release 下载并安装“类目爆品报告”工具包。先识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 SKILL.md 作为项目指令，并保留 scripts 与 references 的相对目录。安装后请说明实际采用的安装方式、可用能力和限制，不要声称获得了 GCRM 权限。
+> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我：实际采用的安装方式、如何调用，以及调用时需要输入的国家、GCRM 一级类目和日期；不要声称安装本身获得了 GCRM 或飞书权限。
+
+The ZIP asset download is counted automatically by GitHub. No user form or
+manual installation report is required. The metric includes first installs and
+updates and must not be described as unique users.

@@ -69,7 +69,7 @@ function actionColor(action) {
 
 const args = argsOf(process.argv.slice(2));
 if (!args.input || !args.output) {
-  throw new Error("Usage: node build_feishu_brief.mjs --input report-spec.json --output brief.xml [--excel-url URL] [--excel-name name.xlsx]");
+  throw new Error("Usage: node build_feishu_brief.mjs --input report-spec.json --output brief.xml [--sheet-url URL] [--sheet-name name]");
 }
 
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
@@ -79,6 +79,7 @@ const rows = [
 ];
 const rowsById = new Map(rows.filter((row) => row.product_id).map((row) => [String(row.product_id), row]));
 const translations = spec.product_translations || {};
+const sheetUrl = args["sheet-url"] || args["excel-url"] || "";
 const selected = [
   ...(spec.recommendations?.benchmarks || []).slice(0, 2).map((item) => ({ ...item, group: "标杆" })),
   ...(spec.recommendations?.growth || []).slice(0, 6).map((item) => ({ ...item, group: "高增" })),
@@ -101,7 +102,7 @@ const title = `${spec.meta.country}｜${spec.meta.category}｜${spec.meta.period
 const lines = [
   `<title>${esc(title)}</title>`,
   `<p><b>区域</b> ${esc(spec.meta.country)}　<b>一级类目</b> ${esc(spec.meta.category)}　<b>周期</b> ${esc(spec.meta.period_start)} 至 ${esc(spec.meta.period_end)}</p>`,
-  `<p><span text-color="gray">类目口径：GCRM Top Product 一级类目（快照 ${esc(spec.meta.taxonomy_snapshot)}）；完整 Top 50 与原始证据见配套 Excel。</span></p>`,
+  `<p><span text-color="gray">类目口径：GCRM Top Product 一级类目（快照 ${esc(spec.meta.taxonomy_snapshot)}）；完整 Top 50 与原始证据见配套飞书电子表格。</span></p>`,
   `<h1>本期判断</h1>`,
   `<callout emoji="💡" background-color="light-blue" border-color="blue">`,
 ];
@@ -170,13 +171,18 @@ lines.push(
   `</tbody></table>`,
   `<h1>完整数据</h1>`,
 );
-if (args["excel-url"]) {
-  lines.push(`<p><a type="url-preview" href="${esc(args["excel-url"])}">查看配套 Excel</a></p>`);
+if (sheetUrl) {
+  lines.push(`<p><a type="url-preview" href="${esc(sheetUrl)}">查看完整飞书电子表格</a></p>`);
 } else {
-  lines.push(`<p>配套文件：${esc(args["excel-name"] || "同名 Excel 报告")}。完整 Top 50、图片与原始口径均保留在表格中。</p>`);
+  lines.push(`<p>配套表格：${esc(args["sheet-name"] || "同名飞书电子表格")}。完整 Top 50、图片与原始口径均保留在表格中。</p>`);
 }
 lines.push(`<p><span text-color="gray">口径：客单价直接取网页展示值；TR（估）=广告消耗区间中点÷总GMV区间中点。区间中点仅用于估算，不替代精确财务口径。</span></p>`);
 
 await fs.mkdir(path.dirname(path.resolve(args.output)), { recursive: true });
 await fs.writeFile(path.resolve(args.output), `${lines.join("\n")}\n`, "utf8");
-process.stdout.write(`${JSON.stringify({ output: path.resolve(args.output), title, recommendations: selected.length }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({
+  output: path.resolve(args.output),
+  title,
+  recommendations: selected.length,
+  sheet_linked: Boolean(sheetUrl),
+}, null, 2)}\n`);

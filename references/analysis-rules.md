@@ -142,7 +142,7 @@ Never state that weather, holidays, trends, or user preferences caused growth un
 
 ## Feishu brief
 
-Use the workbook recommendation IDs as the single source of truth. The Feishu
+Use the Feishu Sheet recommendation IDs as the single source of truth. The Feishu
 brief normally contains at most two benchmark products and up to six growth
 products. Do not repeat the Top 50 table. For each retained product, show the
 Chinese name, image when available, action, GMV/change, displayed average price,
