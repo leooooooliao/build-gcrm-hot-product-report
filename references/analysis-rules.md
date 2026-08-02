@@ -18,7 +18,7 @@ If one link is missing, weaken the action rather than filling the gap with imagi
 
 ## Benchmark products
 
-Select up to four products with meaningful GMV scale and persistent top placement. A falling product may remain a benchmark, but label it `仅作标杆` when copying it is not attractive.
+Select exactly two products with meaningful GMV scale and persistent top placement. A falling product may remain a benchmark, but its action must be `仅作标杆`.
 
 Default benchmark eligibility:
 
@@ -28,7 +28,7 @@ Default benchmark eligibility:
 
 ## Growth products
 
-Select eight to ten products using:
+Select exactly six products using:
 
 1. Meaningful current GMV scale.
 2. Strong positive GMV change or appearance in the rising list.
@@ -40,7 +40,25 @@ Treat extreme growth cautiously. Mention low-base, new-product, or promotion eff
 
 Use `scripts/score_candidates.mjs` to create the initial shortlist. The model may override the order only with an explicit reason based on execution feasibility or duplicated product archetypes.
 
-Do not select ten near-identical SKUs. Keep at most two examples for one product archetype unless their channel or execution model is materially different.
+Build candidates from the Product-ID-deduplicated union of `GMV Top 50` and
+`飙升 Top 50`, not from the rising list alone. When a product appears in both,
+use its `GMV Top 50` row as the canonical recommendation evidence. A growth
+recommendation must have a real positive GMV change in that canonical row.
+
+The final delivery order is deterministic:
+
+1. Two benchmarks ordered by GMV Top rank ascending.
+2. Six growth products ordered by current GMV midpoint descending, then GMV
+   change descending, then source rank ascending.
+
+If six eligible growth products cannot be selected, stop with
+`recommendation_blocked`. Do not return only benchmarks, use a falling product
+as growth, or fill the count with rows whose change is missing.
+
+Do not select near-identical SKUs merely to fill the six growth slots. Keep at
+most two examples for one product archetype unless their channel or execution
+model is materially different; if this makes the fixed 2+6 set impossible,
+return `recommendation_blocked` instead of lowering the standard.
 
 ## Channel driver
 
@@ -134,16 +152,19 @@ Never state that weather, holidays, trends, or user preferences caused growth un
 ## Output restraint
 
 - Three conclusion bullets.
-- Four benchmark products maximum.
-- Ten growth products maximum.
+- Exactly two benchmark products.
+- Exactly six growth products.
 - Seven level-2 category rows maximum.
 - No median discussion unless the user explicitly requests it.
 - Preserve raw evidence and uncertainty.
 
 ## Feishu brief
 
-Use the Feishu Sheet recommendation IDs as the single source of truth. The Feishu
-brief normally contains at most two benchmark products and up to six growth
-products. Do not repeat the Top 50 table. For each retained product, show the
-Chinese name, image when available, action, GMV/change, displayed average price,
-`TR（估）`, live/video mix, driver, and one concise reason/action paragraph.
+Use `delivery-manifest.json` as the only source of truth for both final
+artifacts. The Feishu Sheet and brief must contain the same ordered two
+benchmarks and six growth products and the same `delivery_id`. Do not repeat the
+Top 50 table. For each product, show the product ID, canonical source
+banner/rank, Chinese name, image when available, action, GMV/change, displayed
+average price, `TR（估）`, live/video mix, driver, archetype, and the same concise
+reason/action paragraph. Fetch both outputs and run the reconciliation script
+before exposing either link.

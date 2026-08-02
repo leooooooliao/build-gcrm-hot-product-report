@@ -142,17 +142,6 @@ node scripts/validate_translations.mjs --input "<report-spec.json>"
 
 Do not build the workbook until the validator reports zero missing or invalid translations.
 
-Run the mandatory metric and recommendation-label gate:
-
-```bash
-node scripts/validate_metrics.mjs --input "<report-spec.json>"
-```
-
-Do not continue until it reports `valid: true`. This gate checks rank integrity,
-the displayed average price, ads cost, total GMV, midpoint TR, recommendation
-IDs, the exact category level/path fields, the single action-label system, and
-exactly three conclusion bullets.
-
 Before writing conclusions, run:
 
 ```bash
@@ -164,10 +153,42 @@ Use the analysis pack as the candidate shortlist and evidence table. Do not let 
 Prepare:
 
 - Three short conclusion bullets.
-- Up to four persistent/scale benchmark products.
-- Eight to ten high-growth or next-wave products.
+- Exactly two persistent/scale benchmark products.
+- Exactly six high-growth or next-wave products.
 - One short qualitative insight per recommended product.
 - Category opportunity actions based on the GMV Top 50.
+
+Do not deliver only benchmarks when the merged GMV/rising candidate pool contains
+eligible positive-growth products. If six defensible growth products cannot be
+formed, return `recommendation_blocked` and explain the missing eligibility;
+never silently shrink, pad with blank growth, or label a falling product as growth.
+
+After the 2+6 recommendations are chosen, create the mandatory single delivery
+source of truth:
+
+```bash
+node scripts/build_delivery_manifest.mjs \
+  --input "<report-spec.json>" \
+  --output "<delivery-manifest.json>"
+```
+
+Do not build either final artifact unless this succeeds with eight unique IDs.
+The manifest always uses the GMV Top 50 record when a product also appears in
+the rising list, otherwise the rising record. It fixes the final order to two
+benchmarks by GMV rank, followed by six positive-growth products by current GMV
+scale, growth, and source rank. Both artifacts must show the same
+`delivery_id`; never independently look up recommendation metrics again.
+
+Now run the mandatory full metric and recommendation-label gate:
+
+```bash
+node scripts/validate_metrics.mjs --input "<report-spec.json>"
+```
+
+Do not continue until it reports `valid: true`. This gate checks rank integrity,
+the displayed average price, ads cost, total GMV, midpoint TR, the fixed 2+6
+recommendation set and canonical source rows, the exact category level/path
+fields, the single action-label system, and exactly three conclusion bullets.
 
 Use only one merchant-facing label field, `建议动作`:
 
@@ -189,6 +210,11 @@ Run:
 ```bash
 node scripts/build_report.mjs --input "<report-spec.json>" --output "<output.xlsx>" --preview-dir "<preview-dir>"
 ```
+
+The builder consumes the same deterministic delivery contract as
+`delivery-manifest.json`. The first eight rows of `选品池` must be the ordered
+2+6 recommendations and include the delivery position, type, product ID,
+archetype, insight, canonical source banner/rank, and `delivery_id`.
 
 If the host does not provide `@oai/artifact-tool`, use its native Feishu Sheet
 tools to reproduce the four-sheet contract directly with typed data and native
@@ -245,15 +271,16 @@ The brief must contain only:
 
 1. Market, exact GCRM category path and level, period, and taxonomy snapshot.
 2. The same three conclusion bullets as the Feishu Sheet.
-3. Six to eight strongest recommendations by default: at most two benchmarks and up to six growth products. Use fewer rather than weaken evidence gates.
+3. Exactly eight recommendations in manifest order: two benchmarks followed by six growth products. Never use a different subset in the brief.
 4. For every recommendation: small image when available, Chinese name, action, GMV interval/change, displayed average price, `TR（估）`, live/video shares, driver, and one concise recommendation paragraph.
 5. The four action definitions.
 6. A visible link card to the complete Feishu Sheet.
 
 Create the document with the host's authenticated Feishu/Lark document tool.
 After creation, fetch it again and verify the scope, three bullets,
-recommendation count, average prices, TR values, action definitions, and Feishu
-Sheet link against the JSON and online sheet.
+recommendation count, average prices, TR values, action definitions, delivery
+ID, and Feishu Sheet link against the JSON and online sheet. Do not hand the
+user either URL before the reconciliation gate in section 6 passes.
 
 If the host cannot write Feishu Sheets or documents, return the verified XLSX
 and portable XML as an explicit fallback. Never claim a live Feishu artifact was
@@ -276,6 +303,23 @@ Require all of the following:
 - Header style, clipped product names, increase/decrease colors, row counts, and image coverage are checked online.
 - Feishu XML is generated from the same recommendation IDs as the sheet.
 - The created Feishu document is fetched and reconciled, including its Feishu Sheet link, or a clear Feishu capability blocker is reported.
+
+Normalize the eight recommendation rows read back from `选品池` and the eight
+recommendations fetched from the Feishu document into the readback shape in
+`references/feishu-delivery.md`, then run:
+
+```bash
+node scripts/reconcile_delivery.mjs \
+  --manifest "<delivery-manifest.json>" \
+  --sheet "<sheet-readback.json>" \
+  --brief "<brief-readback.json>"
+```
+
+`valid: true` is a hard handoff gate. Any mismatch in delivery ID, order,
+product ID, type, source row, Chinese name, archetype, action, insight, GMV,
+growth, average price, TR, live/video share, or driver must be repaired and
+read back again. Never send two unreconciled links and ask the user to discover
+the inconsistency.
 
 In the final answer, state the exact market/category/period, row counts, image
 coverage, Feishu recommendation count, and the 3–5 strongest merchant

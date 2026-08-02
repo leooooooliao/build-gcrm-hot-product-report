@@ -124,6 +124,57 @@ Allowed actions:
 
 Each recommendation ID must exist in `GMV Top 50` or `飙升 Top 50`.
 
+`recommendations.benchmarks` must contain exactly two unique Product IDs and
+`recommendations.growth` must contain exactly six. Benchmark actions must be
+`仅作标杆`; growth actions must be `快速跟进`, `条件跟进`, or `小单测试`.
+Every growth product must have a real positive GMV change on its canonical
+source row.
+
+Run `scripts/build_delivery_manifest.mjs` after recommendations are selected.
+Canonical source precedence is fixed: use the `GMV Top 50` row when the same
+Product ID also appears in `飙升 Top 50`; otherwise use the rising row. The
+manifest sorts the two benchmarks by GMV rank and the six growth products by
+current GMV midpoint, growth, and source rank, then assigns positions 1–8 and a
+stable `delivery_id`.
+
+The manifest, not a fresh map over ranking rows, is the only source for final
+recommendation metrics and text. Both outputs must reuse its Chinese name,
+archetype, action, insight, GMV/change, average price, TR, live/video shares,
+driver, source banner/rank, order, and delivery ID.
+
 These are the only merchant-facing classification labels. Do not add parallel
 fields such as `机会标签`, `建议级别`, `优先关注`, or `观察`. Non-recommended
 selection-pool rows use `—` in `建议动作`.
+
+## Delivery readback contract
+
+After creating Feishu artifacts, normalize each artifact to:
+
+```json
+{
+  "delivery_id": "12-hex-character id",
+  "recommendations": [
+    {
+      "position": 1,
+      "group": "标杆",
+      "product_id": "173...",
+      "source_banner": "GMV Top 50",
+      "source_rank": 1,
+      "chinese_name": "中文商品简称",
+      "archetype": "商品原型",
+      "action": "仅作标杆",
+      "insight": "推荐理由与执行建议",
+      "gmv_range": "520K - 530K",
+      "gmv_change": -0.197,
+      "average_price": 114.3,
+      "take_rate_estimate": 0.084,
+      "live_share": 0.642,
+      "video_share": 0.193,
+      "driver": "直播驱动"
+    }
+  ]
+}
+```
+
+Use decimals, not percentage points, for rate fields. Run
+`scripts/reconcile_delivery.mjs`; only `valid: true` permits handoff.

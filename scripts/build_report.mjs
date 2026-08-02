@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
+import { buildDeliveryManifest } from "./delivery_contract.mjs";
 
 const COLORS = {
   navy: "#17324D",
@@ -144,7 +145,8 @@ if (missingTranslations.length) {
 }
 const gmvRows = (spec.rankings["GMV Top 50"] || []).slice(0, 50);
 const risingRows = (spec.rankings["飙升 Top 50"] || []).slice(0, 50);
-const poolRows = [];
+const deliveryManifest = buildDeliveryManifest(spec);
+const poolCandidates = [];
 const poolSeen = new Set();
 for (const item of [
   ...gmvRows.map((row) => ({ banner: "GMV Top 50", row })),
@@ -153,44 +155,31 @@ for (const item of [
   const key = productKey(item.row);
   if (!poolSeen.has(key)) {
     poolSeen.add(key);
-    poolRows.push(item);
+    poolCandidates.push(item);
   }
 }
+const poolById = new Map(poolCandidates.map((item) => [String(item.row.product_id), item]));
+const selectedIds = new Set(deliveryManifest.recommendation_ids);
+const poolRows = [
+  ...deliveryManifest.recommendation_ids.map((id) => poolById.get(id)),
+  ...poolCandidates.filter((item) => !selectedIds.has(String(item.row.product_id))),
+];
 
 const recommendationGroups = [
   {
     title: "一直在卖｜标杆爆品",
     name: "BenchmarkProducts",
-    items: (spec.recommendations?.benchmarks || []).slice(0, 4),
+    items: deliveryManifest.recommendations.filter((item) => item.group === "标杆"),
     prefix: "标杆",
   },
   {
     title: "高速增长｜核心推荐",
     name: "GrowthProducts",
-    items: (spec.recommendations?.growth || []).slice(0, 10),
+    items: deliveryManifest.recommendations.filter((item) => item.group === "增长"),
     prefix: "高增",
   },
 ];
 const allRecommendations = recommendationGroups.flatMap((group) => group.items);
-const allowedActions = new Set(["快速跟进", "条件跟进", "小单测试", "仅作标杆"]);
-const recommendationIds = allRecommendations.map((item) => String(item.product_id || ""));
-if (new Set(recommendationIds).size !== recommendationIds.length) {
-  throw new Error("Duplicate recommendation product_id values are not allowed");
-}
-for (const item of allRecommendations) {
-  if (!item.product_id) throw new Error("Recommendation product_id is required");
-  if (!allowedActions.has(item.action)) {
-    throw new Error(`Invalid recommendation action for ${item.product_id}: ${item.action}`);
-  }
-}
-const candidateById = new Map(
-  [...gmvRows, ...risingRows].map((row) => [String(row.product_id), row]),
-);
-for (const item of allRecommendations) {
-  if (!candidateById.has(String(item.product_id))) {
-    throw new Error(`Recommendation product_id not found: ${item.product_id}`);
-  }
-}
 
 const workbook = Workbook.create();
 const conclusion = workbook.worksheets.add("结论");
@@ -356,11 +345,11 @@ const recommendationById = new Map(
 );
 
 // Selection pool
-setTitle(poolSheet, "A1:Z1", `${spec.meta.country} · ${reportCategoryPath} · 选品池`);
+setTitle(poolSheet, "A1:AE1", `${spec.meta.country} · ${reportCategoryPath} · 选品池`);
 setSubtitle(
   poolSheet,
-  "A2:Z2",
-  `GMV Top 50 + 飙升 Top 50 去重｜${spec.meta.period_start} 至 ${spec.meta.period_end}｜中英文商品名保持单行`,
+  "A2:AE2",
+  `GMV Top 50 + 飙升 Top 50 去重｜前8行为固定2标杆+6增长｜交付校验码 ${deliveryManifest.delivery_id}`,
 );
 const poolHeaders = [
   "来源榜单", "Rank", "图片", "中文商品简称", "Product Name", "Product ID",
@@ -368,24 +357,28 @@ const poolHeaders = [
   "广告消耗区间", "TR（估）", "直播占比（估）", "短视频占比（估）", "主要驱动",
   "订单量区间", "店铺", "匹配质量", "图片URL", "来源页面", "GMV中点（辅助）",
   "直播GMV中点（辅助）", "短视频GMV中点（辅助）", "广告消耗中点（辅助）",
+  "交付序号", "推荐类型", "商品原型", "推荐理由与执行建议", "交付校验码",
 ];
-poolSheet.getRange("A4:Z4").values = [poolHeaders];
-styleHeader(poolSheet.getRange("A4:Z4"));
+poolSheet.getRange("A4:AE4").values = [poolHeaders];
+styleHeader(poolSheet.getRange("A4:AE4"));
 const poolFirst = 5;
 const poolLast = poolFirst + poolRows.length - 1;
 const poolValues = poolRows.map(({ banner, row }) => {
   const total = metric(row.gmv_total);
+  const recommendation = recommendationById.get(String(row.product_id));
   return [
     banner, row.rank, "", translatedName(row), row.product_name, null,
     row.category_l2, row.category_l3,
-    recommendationById.get(String(row.product_id))?.action || "—",
+    recommendation?.action || "—",
     total.range, total.change, metric(row.avg_price).mid, metric(row.ads_cost).range,
     null, null, null, null, metric(row.order_volume).range, row.shop_name,
     row.join_quality || "", row.image_url, spec.meta.source_url, total.mid,
     metric(row.gmv_live).mid, metric(row.gmv_video).mid, metric(row.ads_cost).mid,
+    recommendation?.position || null, recommendation?.group || "", recommendation?.archetype || "",
+    recommendation?.insight || "", recommendation ? deliveryManifest.delivery_id : "",
   ];
 });
-poolSheet.getRange(`A${poolFirst}:Z${poolLast}`).values = poolValues;
+poolSheet.getRange(`A${poolFirst}:AE${poolLast}`).values = poolValues;
 poolSheet.getRange(`F${poolFirst}:F${poolLast}`).formulas =
   poolRows.map(({ row }) => [asTextFormula(row.product_id)]);
 poolSheet.getRange(`N${poolFirst}:N${poolLast}`).formulasR1C1 =
@@ -398,12 +391,12 @@ poolSheet.getRange(`Q${poolFirst}:Q${poolLast}`).formulasR1C1 =
   poolRows.map(() => [
     '=IF(AND(RC[-2]>=0.5,RC[-2]>RC[-1]),"直播驱动",IF(AND(RC[-1]>=0.5,RC[-1]>RC[-2]),"短视频驱动","混合/其他"))',
   ]);
-const poolTable = poolSheet.tables.add(`A4:Z${poolLast}`, true, "GcrmSelectionPool");
+const poolTable = poolSheet.tables.add(`A4:AE${poolLast}`, true, "GcrmSelectionPool");
 poolTable.style = "TableStyleLight1";
 poolTable.showBandedRows = false;
 poolTable.showFilterButton = true;
-styleHeader(poolSheet.getRange("A4:Z4"));
-poolSheet.getRange(`A${poolFirst}:Z${poolLast}`).format = {
+styleHeader(poolSheet.getRange("A4:AE4"));
+poolSheet.getRange(`A${poolFirst}:AE${poolLast}`).format = {
   fill: COLORS.white,
   font: { color: COLORS.gray900, size: 9 },
   verticalAlignment: "center",
@@ -422,11 +415,12 @@ const poolWidths = {
   A: 100, B: 48, C: 62, D: 210, E: 330, F: 155, G: 150, H: 160, I: 82, J: 90,
   K: 72, L: 105, M: 105, N: 74, O: 90, P: 100, Q: 88, R: 90, S: 130, T: 115,
   U: 220, V: 230, W: 100, X: 110, Y: 118, Z: 115,
+  AA: 72, AB: 78, AC: 130, AD: 380, AE: 110,
 };
 for (const [col, width] of Object.entries(poolWidths)) {
   poolSheet.getRange(`${col}1:${col}${poolLast}`).format.columnWidthPx = width;
 }
-poolSheet.getRange("A4:Z4").format.rowHeightPx = 34;
+poolSheet.getRange("A4:AE4").format.rowHeightPx = 34;
 poolSheet.freezePanes.freezeRows(4);
 poolSheet.freezePanes.freezeColumns(6);
 
@@ -435,7 +429,7 @@ setTitle(conclusion, "A1:N1", `${spec.meta.country} ${reportCategoryPath}选品�
 setSubtitle(
   conclusion,
   "A2:N2",
-  `周期：${spec.meta.period_start} 至 ${spec.meta.period_end}｜Top 50｜TR=广告消耗中点/总GMV中点｜绿色=增长，红色=下降`,
+  `周期：${spec.meta.period_start} 至 ${spec.meta.period_end}｜2标杆+6增长｜交付校验码 ${deliveryManifest.delivery_id}｜TR=广告消耗中点/总GMV中点`,
 );
 setSection(conclusion, "A4:N4", "本期怎么选");
 const summaryBullets = (spec.summary_bullets || []).slice(0, 3);
@@ -460,7 +454,7 @@ const imagePlacements = [];
 
 function recommendationSourceRow(item) {
   const id = String(item.product_id);
-  return rawLocation.get(`GMV Top 50|${id}`) || rawLocation.get(`飙升 Top 50|${id}`);
+  return rawLocation.get(`${item.source_banner}|${id}`);
 }
 
 function writeRecommendationSection(startRow, group) {
@@ -475,9 +469,9 @@ function writeRecommendationSection(startRow, group) {
   ]];
   styleHeader(conclusion.getRange(`A${headerRow}:N${headerRow}`));
   conclusion.getRange(`A${firstRow}:N${lastRow}`).values = group.items.map((item) => {
-    const product = candidateById.get(String(item.product_id));
+    const product = item.source;
     return [
-      `${group.prefix} #${product.rank}`, "", item.archetype, translatedName(product),
+      `${group.prefix} #${item.source_rank}`, "", item.archetype, item.chinese_name,
       product.product_name, item.action, null, null, null, null, null, null, null, item.insight,
     ];
   });
@@ -493,7 +487,7 @@ function writeRecommendationSection(startRow, group) {
       safeSheetFormula("Top50原始榜单", `AF${sourceRow}`),
       safeSheetFormula("Top50原始榜单", `AI${sourceRow}`),
     ]];
-    const product = candidateById.get(String(item.product_id));
+    const product = item.source;
     if (product.image_url) {
       imagePlacements.push({ sheet: conclusion, row: targetRow - 1, col: 1, url: product.image_url });
     }
@@ -677,7 +671,7 @@ guideSheet.getRange("A22:B25").values = [
   [1, "结论：标杆爆品、高速增长品、类目机会、直播/短视频驱动"],
   [2, "选品池：GMV Top50 + 飙升榜去重，保留一套建议动作"],
   [3, "原始榜单：GMV、销量、广告消耗、飙升各Top50，保留客单价与TR审计列"],
-  [4, "飞书文档：只保留本期判断与6–8个核心推荐；完整榜单在飞书电子表格"],
+  [4, "飞书文档：只保留本期判断与固定8个推荐（2标杆+6增长）；完整榜单在飞书电子表格"],
 ];
 guideSheet.getRange("A22:B25").format = {
   font: { color: COLORS.gray900, size: 10 },
@@ -794,6 +788,7 @@ console.log(JSON.stringify({
   raw_rows: rawRows.length,
   pool_rows: poolRows.length,
   recommendations: allRecommendations.length,
+  delivery_id: deliveryManifest.delivery_id,
   unique_images: uniqueUrls.length,
   embedded_images: embeddedImages,
   preview_dir: previewDir,
