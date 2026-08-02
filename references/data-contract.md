@@ -9,6 +9,10 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
   "meta": {
     "country": "US",
     "category": "宠物用品",
+    "category_level": 1,
+    "category_l1": "宠物用品",
+    "category_l2": null,
+    "category_path": "宠物用品",
     "period_start": "2026-06-25",
     "period_end": "2026-07-25",
     "source_url": "https://mmm.tiktok-row.net/...",
@@ -33,6 +37,13 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
   }
 }
 ```
+
+For a level-2 report, use the confirmed full breadcrumb for both `category`
+and `category_path`, for example `宠物用品 > 猫狗食品`; set
+`category_level` to `2`, `category_l1` to `宠物用品`, and `category_l2` to
+`猫狗食品`. For backward compatibility, builders may accept an older level-1
+spec containing only `meta.category`, but new reports must include all four
+category fields.
 
 ## Ranking row
 

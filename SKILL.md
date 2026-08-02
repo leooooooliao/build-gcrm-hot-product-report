@@ -1,11 +1,12 @@
 ---
 name: build-gcrm-hot-product-report
-description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
+description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 or level-2 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
 ---
 
 # 类目爆品报告
 
-Create one decision-ready report for one market and one level-1 category. Keep the interaction short and make the output reproducible.
+Create one decision-ready report for one market and one exact GCRM level-1 or
+level-2 category. Keep the interaction short and make the output reproducible.
 
 Users do not need to remember the English skill identifier. Treat natural requests such as the following as direct invocations:
 
@@ -33,16 +34,16 @@ Read `references/filter-options.json` and `references/interaction.md`.
 Require exactly three inputs:
 
 1. Country or SEA child country.
-2. Exact current-version GCRM level-1 category.
+2. Exact current-version GCRM level-1 category, or a more precise level-2 category.
 3. Date range.
 
-If the category is missing, or the user asks what categories are supported, run:
+On the first report interaction, always run:
 
 ```bash
 node scripts/validate_request.mjs --list-options
 ```
 
-Show every item in `category_options_text` immediately. Do not show only examples, abbreviate the list, or ask the user to guess a label. If the user already supplied an exact valid category, do not repeat the full list.
+Tell the user that category recognition follows the current Marketing Advisor / GCRM Top Product level-1 and level-2 taxonomy, and show every item in `category_options_text` as the complete level-1 reference list. Do not show only examples or abbreviate the list. If all three inputs are already present, show the reminder and list without waiting for another reply.
 
 Run:
 
@@ -50,9 +51,13 @@ Run:
 node scripts/validate_request.mjs --country "<input>" --category "<input>" --start "YYYY-MM-DD" --end "YYYY-MM-DD"
 ```
 
-Always tell the user that category labels follow the GCRM Top Product taxonomy snapshot named in the validator output. Do not continue on an ambiguous or invalid category. Give at most three close candidates and ask the user to confirm the exact label.
+Apply the validator result exactly:
 
-When a supplied category is invalid, show the three closest candidates first, then the complete current category list returned by the validator so the user can choose an exact label.
+- Exact level-1 match: start immediately at level 1. Never ask whether the user wants level 2.
+- No level-1 match but one exact level-2 match: ask once to confirm the full `一级 > 二级` path.
+- Duplicate level-2 label: show every matching full path and require one choice.
+- No exact level-1 or level-2 match: give at most three close paths and the complete level-1 list. Never silently map.
+- A confirmed full breadcrumb is valid and must not be confirmed again.
 
 Accept an alias only after showing the mapped platform label. Treat broad inputs such as `家居` as ambiguous because they may mean `家居用品`、`家具`、`家纺布艺` or `家装建材`.
 
@@ -65,20 +70,26 @@ Read `references/browser-runbook.md`. Build the deterministic filter plan:
 ```bash
 node scripts/build_filter_plan.mjs \
   --country "<confirmed country>" \
-  --category "<confirmed exact level-1 category>"
+  --category "<exact level-1 or confirmed level-1 > level-2 path>"
 ```
 
 Open the internal GCRM Top Product page in the user's authenticated browser session:
 
 `https://mmm.tiktok-row.net/gcrm_overseas/phoenix/marketing-advisor/product-insights/top-product`
 
-Follow the plan's fixed order: country first, then the single level-1 category, then the exact dates, then save and wait. Country and Category are custom TreeSelect/Cascader controls, not native `<select>` elements.
+Follow the plan's fixed order: country first, then the single requested category, then the exact dates, then save and wait. Country and Category are custom TreeSelect/Cascader controls, not native `<select>` elements.
+
+For level 1, click the parent row's checkbox child and do not ask about level 2.
+For level 2, click the level-1 row body only to expand it, take a fresh DOM
+snapshot, then click the exact level-2 checkbox child. Never click the parent
+checkbox while trying to expand. The parent must remain unchecked; if it was
+accidentally selected, clear it and retry the child selection before saving.
 
 When a target is offscreen or virtualized, use an exact DOM locator so the browser auto-scrolls inside the open overlay. If that fails, scroll only inside the visible dropdown; never treat page-body scrolling as a substitute. Expand SEA before selecting TH / ID / VN / PH / MY / SG.
 
 The user may be asked once to enable browser control or log in. Never ask the user to scroll, expand SEA, or repeatedly select countries, categories, banners, or pages. If all safe paths fail, return partial results with `collection_blocked`; never describe a filter failure as “no data”.
 
-After saving, re-read the visible country, the single selected level-1 category, the exact dates, and numeric result rows. A successful click is not a completed filter.
+After saving, re-read the visible country, the single selected category, the exact dates, and numeric result rows. For a level-2 report, verify the child is checked and the parent is unchecked. A successful click is not a completed filter.
 
 Collect at most:
 
@@ -139,7 +150,8 @@ node scripts/validate_metrics.mjs --input "<report-spec.json>"
 
 Do not continue until it reports `valid: true`. This gate checks rank integrity,
 the displayed average price, ads cost, total GMV, midpoint TR, recommendation
-IDs, the single action-label system, and exactly three conclusion bullets.
+IDs, the exact category level/path fields, the single action-label system, and
+exactly three conclusion bullets.
 
 Before writing conclusions, run:
 
@@ -231,7 +243,7 @@ node scripts/build_feishu_brief.mjs \
 
 The brief must contain only:
 
-1. Market, exact GCRM level-1 category, period, and taxonomy snapshot.
+1. Market, exact GCRM category path and level, period, and taxonomy snapshot.
 2. The same three conclusion bullets as the Feishu Sheet.
 3. Six to eight strongest recommendations by default: at most two benchmarks and up to six growth products. Use fewer rather than weaken evidence gates.
 4. For every recommendation: small image when available, Chinese name, action, GMV interval/change, displayed average price, `TR（估）`, live/video shares, driver, and one concise recommendation paragraph.

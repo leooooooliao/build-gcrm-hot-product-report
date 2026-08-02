@@ -43,6 +43,14 @@ const requiredMeta = ["country", "category", "period_start", "period_end", "sour
 for (const field of requiredMeta) {
   if (!spec.meta?.[field]) throw new Error(`Missing meta.${field}`);
 }
+const reportCategoryPath = spec.meta.category_path || spec.meta.category;
+const reportCategoryLevel = Number(spec.meta.category_level || 1);
+if (![1, 2].includes(reportCategoryLevel)) {
+  throw new Error("meta.category_level must be 1 or 2");
+}
+if (reportCategoryLevel === 2 && (!spec.meta.category_l1 || !spec.meta.category_l2)) {
+  throw new Error("Level-2 reports require meta.category_l1 and meta.category_l2");
+}
 if (!Array.isArray(spec.rankings?.["GMV Top 50"]) || !spec.rankings["GMV Top 50"].length) {
   throw new Error("rankings['GMV Top 50'] must contain rows");
 }
@@ -254,7 +262,7 @@ function addActionFont(sheet, range, anchor) {
 }
 
 // Raw source
-setTitle(rawSheet, "A1:AI1", `${spec.meta.country} · ${spec.meta.category} · Top 50 原始榜单`);
+setTitle(rawSheet, "A1:AI1", `${spec.meta.country} · ${reportCategoryPath} · Top 50 原始榜单`);
 setSubtitle(
   rawSheet,
   "A2:AI2",
@@ -348,7 +356,7 @@ const recommendationById = new Map(
 );
 
 // Selection pool
-setTitle(poolSheet, "A1:Z1", `${spec.meta.country} · ${spec.meta.category} · 选品池`);
+setTitle(poolSheet, "A1:Z1", `${spec.meta.country} · ${reportCategoryPath} · 选品池`);
 setSubtitle(
   poolSheet,
   "A2:Z2",
@@ -423,7 +431,7 @@ poolSheet.freezePanes.freezeRows(4);
 poolSheet.freezePanes.freezeColumns(6);
 
 // Conclusion
-setTitle(conclusion, "A1:N1", `${spec.meta.country} ${spec.meta.category}选品报告`);
+setTitle(conclusion, "A1:N1", `${spec.meta.country} ${reportCategoryPath}选品报告`);
 setSubtitle(
   conclusion,
   "A2:N2",
@@ -605,7 +613,7 @@ setTitle(guideSheet, "A1:D1", "使用说明｜每次只拉一个市场与一个�
 setSubtitle(
   guideSheet,
   "A2:D2",
-  `类目版本：GCRM Top Product 一级类目（快照 ${spec.meta.taxonomy_snapshot}）`,
+  `类目版本：GCRM Top Product 一级/二级类目（快照 ${spec.meta.taxonomy_snapshot}）；本报告口径：${reportCategoryPath}`,
 );
 guideSheet.getRange("A4:D4").values = [[
   "输入", "需要用户给什么", "可选项 / 示例", "不清楚时怎么追问",
@@ -618,9 +626,9 @@ guideSheet.getRange("A5:D7").values = [
     "如果只说“东南亚”，追问是SEA汇总，还是具体 TH、MY、VN、PH、ID、SG。",
   ],
   [
-    "2. 一级类目", "使用平台筛选器里的准确一级类目",
-    "例如：宠物用品、美妆个护、家居用品、运动与户外、汽车与摩托车",
-    "如果类目不在当前版本，给最多3个近似候选并要求确认；不要自行猜。",
+    "2. 类目", "使用平台筛选器里的准确一级类目，或已确认的二级完整路径",
+    "一级如：宠物用品；二级如：宠物用品 > 猫狗食品",
+    "一级精确命中就直接执行；仅在未命中一级但命中二级时确认一次完整路径。",
   ],
   [
     "3. 时间周期", "明确开始日和结束日",

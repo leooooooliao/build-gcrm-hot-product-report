@@ -8,6 +8,11 @@ Preferred request:
 
 > 帮我做一份类目爆品报告吧：国家是 US，类目是宠物用品，时间看最近30天。
 
+On the first interaction, state that categories follow the current Marketing
+Advisor / GCRM Top Product level-1 and level-2 taxonomy and enumerate the full
+level-1 list. Exact level-1 input runs immediately; only an input that misses
+level 1 but matches level 2 requires one full-path confirmation.
+
 If the host supports explicit skill identifiers, `$build-gcrm-hot-product-report` remains valid.
 
 ## Detect the host before installation
@@ -74,6 +79,9 @@ Read `references/browser-runbook.md` before live collection and run
 - Prefer exact DOM locators, which can auto-scroll inside an open overlay.
 - A visual-only fallback must scroll the dropdown overlay, not the page body.
 - For SEA child countries, expand SEA and take a fresh snapshot before retrying.
+- For a level-2 category, click the parent row body to expand it, never the
+  parent checkbox; refresh the snapshot, select only the exact child checkbox,
+  and verify the parent remains unchecked.
 - Prefer XHR/API, export, or pagination over visually scrolling 50 table rows.
 
 The user may be asked once for browser permission or login. Do not ask the user
@@ -89,7 +97,7 @@ The GitHub repository may be public, but the GCRM source page remains access-con
 
 Use this prompt:
 
-> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我：实际采用的安装方式、如何调用，以及调用时需要输入的国家、GCRM 一级类目和日期；不要声称安装本身获得了 GCRM 或飞书权限。
+> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我：实际采用的安装方式、如何调用，以及调用时需要输入的国家、GCRM 一级或二级类目和日期；不要声称安装本身获得了 GCRM 或飞书权限。
 
 The ZIP asset download is counted automatically by GitHub. No user form or
 manual installation report is required. The metric includes first installs and

@@ -22,7 +22,7 @@ After request validation, run:
 ```bash
 node scripts/build_filter_plan.mjs \
   --country "<confirmed country>" \
-  --category "<confirmed exact level-1 category>"
+  --category "<exact level-1 category or confirmed level-1 > level-2 path>"
 ```
 
 Use the returned URL, selectors, operation order, and completion checks. Do not
@@ -38,16 +38,27 @@ guess selectors when a current plan is available.
    take a fresh full DOM snapshot, and locate the child country again.
 4. Open Category with `category_selection.trigger_selector`, then take a fresh
    full DOM snapshot. The Cascader overlay may be mounted outside the trigger.
-5. Clear other checked level-1 rows. If the target row is already
-   `aria-checked="true"`, do not click it again.
-6. Select the target row's checkbox child. Clicking the row text may only expand
-   level 2 and does not prove the level-1 category was selected.
-7. Set the exact start and end dates, save, and wait for loading to finish.
-8. Verify the visible country, the single selected level-1 category, exact
-   dates, and numeric ranking rows.
+5. Clear other checked category rows. If the requested category is level 1,
+   click only its checkbox child. Do not ask whether the user wants level 2.
+6. If the requested category is level 2, follow this fixed sequence:
+   - click the exact parent level-1 row body to expand it; do **not** click the
+     parent checkbox;
+   - take a fresh full DOM snapshot after the second menu appears;
+   - locate the exact level-2 row in the second menu and click its checkbox
+     child;
+   - verify the parent remains `aria-checked="false"` and the target child is
+     `aria-checked="true"`.
+7. If the parent was accidentally selected, clear its checkbox, re-expand the
+   parent, refresh the snapshot, and select only the child. Never continue with
+   both parent and child selected.
+8. Set the exact start and end dates, save, and wait for loading to finish.
+9. Verify the visible country, the single intended category, exact dates, and
+   numeric ranking rows.
 
-The selected category text must equal the requested category. An overflow value
-of `+1` or higher means more than one level-1 category remains selected.
+For a level-1 request, the only checked category row must be that level-1 row.
+For a level-2 request, the only checked category row must be that level-2 row;
+its level-1 parent must stay unchecked. An overflow value of `+1` or higher
+means the filter is invalid.
 
 ## Handle offscreen and virtualized options
 
@@ -56,7 +67,9 @@ Use this order:
 1. Click the exact DOM selector. A capable locator scrolls the target into view
    inside the open overlay.
 2. Refresh the DOM snapshot and try the strict selector again.
-3. Use the fallback category selector only when it matches exactly one element.
+3. Use the fallback category selector only when it matches exactly one element
+   in the intended menu. A duplicate label outside the intended parent is not a
+   valid match.
 4. If visual scrolling is required, place the pointer inside the visible
    TreeSelect or Cascader menu and scroll that overlay only.
 
