@@ -77,6 +77,6 @@ images, and action definitions.
 
 ## 5. Handoff
 
-Return both live URLs. State market, exact level-1 category, period, online row
+Return both live URLs. State market, exact category path and level, period, online row
 counts, image coverage, formula-verification result, and recommendation count.
 Never expose the intermediate XLSX unless the online delivery failed.

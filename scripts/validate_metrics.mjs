@@ -51,6 +51,32 @@ const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
 const errors = [];
 const allRows = [];
 
+const categoryLevel = Number(spec.meta?.category_level);
+const categoryLevelOne = String(spec.meta?.category_l1 || "").trim();
+const categoryLevelTwo = String(spec.meta?.category_l2 || "").trim();
+const categoryPath = String(spec.meta?.category_path || "").trim();
+if (![1, 2].includes(categoryLevel)) {
+  errors.push("meta.category_level: must be 1 or 2");
+}
+if (!categoryLevelOne) errors.push("meta.category_l1: required");
+if (!categoryPath) errors.push("meta.category_path: required");
+if (categoryLevel === 1) {
+  if (categoryLevelTwo) errors.push("meta.category_l2: must be empty for a level-1 report");
+  if (categoryPath && categoryPath !== categoryLevelOne) {
+    errors.push("meta.category_path: must equal category_l1 for a level-1 report");
+  }
+}
+if (categoryLevel === 2) {
+  if (!categoryLevelTwo) errors.push("meta.category_l2: required for a level-2 report");
+  const expectedPath = `${categoryLevelOne} > ${categoryLevelTwo}`;
+  if (categoryPath && categoryPath !== expectedPath) {
+    errors.push(`meta.category_path: expected ${expectedPath}`);
+  }
+}
+if (categoryPath && spec.meta?.category !== categoryPath) {
+  errors.push("meta.category: must equal meta.category_path");
+}
+
 for (const banner of banners) {
   const rows = spec.rankings?.[banner] || [];
   if (!Array.isArray(rows)) {

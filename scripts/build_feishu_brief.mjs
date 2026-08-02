@@ -73,6 +73,8 @@ if (!args.input || !args.output) {
 }
 
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
+const reportCategoryPath = spec.meta.category_path || spec.meta.category;
+const reportCategoryLevel = Number(spec.meta.category_level || 1);
 const rows = [
   ...(spec.rankings?.["GMV Top 50"] || []),
   ...(spec.rankings?.["飙升 Top 50"] || []),
@@ -98,11 +100,11 @@ for (const item of selected) {
   }
 }
 
-const title = `${spec.meta.country}｜${spec.meta.category}｜${spec.meta.period_start}至${spec.meta.period_end} 爆品推荐`;
+const title = `${spec.meta.country}｜${reportCategoryPath}｜${spec.meta.period_start}至${spec.meta.period_end} 爆品推荐`;
 const lines = [
   `<title>${esc(title)}</title>`,
-  `<p><b>区域</b> ${esc(spec.meta.country)}　<b>一级类目</b> ${esc(spec.meta.category)}　<b>周期</b> ${esc(spec.meta.period_start)} 至 ${esc(spec.meta.period_end)}</p>`,
-  `<p><span text-color="gray">类目口径：GCRM Top Product 一级类目（快照 ${esc(spec.meta.taxonomy_snapshot)}）；完整 Top 50 与原始证据见配套飞书电子表格。</span></p>`,
+  `<p><b>区域</b> ${esc(spec.meta.country)}　<b>类目</b> ${esc(reportCategoryPath)}　<b>类目层级</b> ${reportCategoryLevel === 2 ? "二级" : "一级"}　<b>周期</b> ${esc(spec.meta.period_start)} 至 ${esc(spec.meta.period_end)}</p>`,
+  `<p><span text-color="gray">类目口径：GCRM Top Product 一级/二级类目（快照 ${esc(spec.meta.taxonomy_snapshot)}）；完整 Top 50 与原始证据见配套飞书电子表格。</span></p>`,
   `<h1>本期判断</h1>`,
   `<callout emoji="💡" background-color="light-blue" border-color="blue">`,
 ];

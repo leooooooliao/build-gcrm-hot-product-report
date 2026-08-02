@@ -1,43 +1,75 @@
 # Interaction contract
 
-## First prompt
+## First response
 
-Ask only for missing fields. When the category is missing, include the complete category list returned by:
+On the first report interaction, always run:
 
 ```bash
 node scripts/validate_request.mjs --list-options
 ```
 
-Use one compact message:
+State that category recognition follows the current Marketing Advisor / GCRM
+Top Product level-1 and level-2 taxonomy. Include the complete
+`category_options_text` as the level-1 reference list even when the user has
+already supplied a category. Ask only for missing fields; the list is guidance,
+not an extra confirmation step.
 
-> 没问题，我来帮你做一份类目爆品报告。告诉我 3 项信息就行：
-> 1）国家：例如 US；东南亚可以选 SEA 汇总，或 TH / ID / VN / PH / MY / SG。
-> 2）一级类目：请从下面完整列表中回复一个准确名称。这里使用 GCRM Top Product 当前版本的类目名称（本 Skill 快照：2026-07-28）。
+Use this compact template:
+
+> 没问题，我会按营销参谋 GCRM Top Product 当前版本的一级/二级类目来识别（本 Skill 快照：`<taxonomy_snapshot>`）。你可以直接给一级类目，也可以给更精准的二级类目。
 >
+> 当前完整一级类目如下：
 > `<category_options_text>`
 >
-> 3）时间：例如最近30天，或 2026-06-25 至 2026-07-25。
+> 做报告需要 3 项：国家（US；或 SEA / TH / ID / VN / PH / MY / SG）、类目、时间（如最近30天）。`<missing_fields_prompt>`
 
-Replace `<category_options_text>` with the full generated text. Never leave the placeholder visible, shorten the list, or substitute a few examples.
+Replace `<category_options_text>` with every current level-1 category. Never
+leave the placeholder visible, shorten the list, or substitute examples.
 
-## Exact-match response
+If all three inputs are present, replace `<missing_fields_prompt>` with “你给的信息已齐，我现在直接校验并开始执行。” Do not wait for another reply.
 
-> 好的，这次看 `<country> × <category> × <start> 至 <end>`。类目按 GCRM Top Product 一级类目版本（快照 `<taxonomy_snapshot>`）执行；我只拉这一份，不扩展到其他国家或类目。
+## Category decision tree
 
-## Alias response
+Use this order without exception:
 
-> 你输入的 `<input>` 不是真正的平台类目标签。我理解最接近的是 `<canonical>`。本报告使用 GCRM Top Product 一级类目版本（快照 `<taxonomy_snapshot>`），请确认是否按 `<canonical>` 执行。
+1. Exact level-1 match: execute at level 1 immediately. Do not ask whether the user wants level 2.
+2. No level-1 match, but one exact level-2 match: ask once to confirm the full `一级 > 二级` path.
+3. No level-1 match, but the level-2 label exists under multiple parents: show every matching full path and ask the user to choose one.
+4. No exact level-1 or level-2 match: show at most three close paths, then the complete level-1 list. Never silently map.
 
-## Ambiguous response
+An explicitly confirmed full `一级 > 二级` path is valid and must not be asked
+about again.
 
-> `<input>` 在当前版本里不是唯一类目。最接近的是：`<candidate_1>`、`<candidate_2>`、`<candidate_3>`。请回复其中一个准确名称。
+## Exact level-1 response
+
+> 已识别为营销参谋一级类目“`<category>`”，这次按 `<country> × <category> × <start> 至 <end>` 直接执行，不再追问二级类目。
+
+## Exact level-2 confirmation
+
+> 你输入的“`<input>`”不是一级类目；在当前二级类目中匹配到“`<level_1> > <level_2>`”。请确认是否按这个二级类目执行。
+
+After confirmation, continue immediately and pass the full breadcrumb to the
+validator and filter-plan builder.
+
+## Ambiguous level-2 response
+
+> 二级类目“`<input>`”存在多个路径：`<path_1>`、`<path_2>`。请回复一个完整路径，我会只按该二级类目执行。
+
+## Alias or invalid response
+
+For a level-1 alias:
+
+> 你输入的“`<input>`”不是平台的准确一级类目标签；最接近“`<canonical>`”。请确认是否按这个一级类目执行。
+
+For an invalid category:
+
+> “`<input>`”不在当前版本的一、二级类目中。最接近的是：`<candidate_1>`、`<candidate_2>`、`<candidate_3>`。请回复一个准确名称或完整路径。
 >
 > 当前完整一级类目如下：
 > `<category_options_text>`
 
-For `家居`, prefer candidates `家居用品`、`家具`、`家纺布艺`; mention `家装建材` when the user's intent is renovation/building materials.
-
-Replace `<category_options_text>` with all current categories returned by the validator.
+For `家居`, prefer `家居用品`、`家具`、`家纺布艺`; mention `家装建材` when
+the intent is renovation/building materials.
 
 ## SEA response
 
@@ -66,6 +98,7 @@ If the GCRM session is logged out, ask for one action only:
 
 > 当前 GCRM 登录已失效。请在本地浏览器完成登录；登录后我会从筛选步骤继续，不需要你手动切换国家、类目或榜单。
 
-Never ask the user to scroll a dropdown, expand SEA, select an offscreen
-category, or page through Top 50. After all automated recovery paths fail,
-explain the capability blocker and return only verified partial data.
+Never ask the user to scroll a dropdown, expand SEA or a category parent,
+select an offscreen category, or page through Top 50. After all automated
+recovery paths fail, explain the capability blocker and return only verified
+partial data.
