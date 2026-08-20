@@ -122,7 +122,8 @@ For every banner, verify that ranks are unique and ascending, no unexplained gap
 
 ## 3. Normalize and analyze
 
-Read `references/data-contract.md`, `references/translation-rules.md`, and `references/analysis-rules.md`.
+Read `references/data-contract.md`, `references/translation-rules.md`,
+`references/analysis-rules.md`, and `references/creative-links.md`.
 
 Create one JSON input matching the contract. Preserve blurred intervals exactly as displayed. Use interval midpoints only for calculations:
 
@@ -155,7 +156,9 @@ Prepare:
 - Three short conclusion bullets.
 - Exactly two persistent/scale benchmark products.
 - Exactly six high-growth or next-wave products.
-- One short qualitative insight per recommended product.
+- One structured decision card per recommended product: `insight` (why it is
+  worth watching), `local_context` (local habit/season/occasion interpretation),
+  `local_context_status`, optional source URLs, and `execution_advice`.
 - Category opportunity actions based on the GMV Top 50.
 
 Do not deliver only benchmarks when the merged GMV/rising candidate pool contains
@@ -201,14 +204,34 @@ Do not create overlapping fields such as `机会标签`, `建议级别`, or `优
 
 Label non-data explanations with `推测`. Focus on seasonality, product pain point, content demonstrability, logistics/after-sales, safety, and compliance. Do not pad the report with medians or descriptive statistics that do not change a merchant decision.
 
+For the local-market paragraph, use lightweight AI search when the host can
+search. Do not force a festival or seasonal explanation when none is credible.
+Set `local_context_status` to `searched` and label it `AI搜索分析，仅供参考` when
+search was used; otherwise set it to `unverified` and label it
+`AI定性分析，未联网核验，仅供参考`. This paragraph gives Chinese merchants a
+local usage or timing lens; it never proves causality.
+
+After the fixed eight Product IDs exist, optionally query the creative dashboard
+under `references/creative-links.md`. Keep at most five non-NULL URLs per product,
+query no more than five IDs together, and never补查 merely to fill five links.
+Material collection enriches the report but never blocks the main GCRM delivery.
+
 ## 4. Build the verified spreadsheet source
 
 Prefer the bundled Node runtime and `@oai/artifact-tool` paths when the host provides them. In Codex, use paths returned by `load_workspace_dependencies` and create `node_modules` as a symlink to the returned bundled directory in a writable task directory.
 
-Run:
+Read `references/sheet-contract.md`, print the machine contract, then run:
 
 ```bash
-node scripts/build_report.mjs --input "<report-spec.json>" --output "<output.xlsx>" --preview-dir "<preview-dir>"
+node scripts/validate_sheet_delivery.mjs --print-contract
+```
+
+```bash
+node scripts/build_report.mjs \
+  --input "<report-spec.json>" \
+  --output "<output.xlsx>" \
+  --preview-dir "<preview-dir>" \
+  [--creative-links "<creative-links.json>"]
 ```
 
 The builder consumes the same deterministic delivery contract as
@@ -217,7 +240,7 @@ The builder consumes the same deterministic delivery contract as
 archetype, insight, canonical source banner/rank, and `delivery_id`.
 
 If the host does not provide `@oai/artifact-tool`, use its native Feishu Sheet
-tools to reproduce the four-sheet contract directly with typed data and native
+tools to reproduce the same core contract directly with typed data and native
 styles. Do not pretend the bundled script ran. Only fall back to normalized JSON
 when the host can create and verify neither the online sheet nor an XLSX transfer
 artifact.
@@ -226,12 +249,22 @@ Treat this XLSX as a verified transfer artifact for Feishu, not the normal final
 user deliverable. In Codex, write it under `outputs/<thread_id>/`. On other
 agents, use the platform's normal temporary or artifact directory.
 
-The workbook must contain exactly:
+The workbook must contain these four core sheets:
 
 1. `结论`
 2. `选品池`
 3. `Top50原始榜单`
 4. `使用说明`
+
+Additional well-defined sheets are allowed to the right. If the creative
+dashboard was queried, `素材链接` is required as a fifth sheet; a product with
+zero valid URLs keeps an explicit zero-link status and is not补查.
+
+For `选品池`, `Top50原始榜单`, and conditional `素材链接`, use the exact core
+headers exported by `scripts/sheet_contract.mjs`. One cell carries one semantic
+field: GMV interval and GMV change must be different cells, as must every other
+interval/change pair. Auxiliary columns may be appended to the right, but core
+headers cannot be deleted, renamed, merged, or embedded with line breaks.
 
 Keep the established visual contract:
 
@@ -248,7 +281,8 @@ Keep the established visual contract:
 
 Read `references/feishu-delivery.md`. The two normal final deliverables are:
 
-1. A polished Feishu Sheet containing the complete four-sheet report.
+1. A polished Feishu Sheet containing the complete core report and conditional
+   material-link sheet.
 2. A concise Feishu document generated from the same `report-spec.json` and
    linked to that Feishu Sheet. It is not a copy of the full table and must not
    contain a Top 50 table.
@@ -264,17 +298,27 @@ Run:
 node scripts/build_feishu_brief.mjs \
   --input "<report-spec.json>" \
   --output "<feishu-brief.xml>" \
-  --sheet-url "<created Feishu Sheet URL>"
+  --sheet-url "<created Feishu Sheet URL>" \
+  [--creative-links "<creative-links.json>"]
 ```
+
+The document builder refuses to run without a live Sheet URL or an explicit
+`--fallback-xlsx` artifact. Build, publish, read back, and validate the Sheet
+before generating the document.
 
 The brief must contain only:
 
 1. Market, exact GCRM category path and level, period, and taxonomy snapshot.
 2. The same three conclusion bullets as the Feishu Sheet.
-3. Exactly eight recommendations in manifest order: two benchmarks followed by six growth products. Never use a different subset in the brief.
-4. For every recommendation: small image when available, Chinese name, action, GMV interval/change, displayed average price, `TR（估）`, live/video shares, driver, and one concise recommendation paragraph.
-5. The four action definitions.
-6. A visible link card to the complete Feishu Sheet.
+3. The four action definitions before the product sections.
+4. Exactly eight narrative recommendation sections in manifest order: two
+   benchmarks followed by six growth products. Never use a product table.
+5. For every recommendation: image when available, Chinese name, action, GMV
+   interval/change, displayed average price, `TR（估）`, live/video shares,
+   driver, `为什么值得看`, the labeled local-market paragraph, `结论与动作`, and
+   one to three material links when available (default two).
+6. A visible link card to the complete Feishu Sheet, which keeps all valid
+   material links and full data.
 
 Create the document with the host's authenticated Feishu/Lark document tool.
 After creation, fetch it again and verify the scope, three bullets,
@@ -298,10 +342,12 @@ Require all of the following:
 - Key conclusion values reconcile with the GMV Top 50 source.
 - The XLSX archive passes an integrity check.
 - Embedded-image count is reported.
-- The Feishu Sheet contains exactly the expected four sheets and is read back.
+- The Feishu Sheet contains all four core sheets; conditional `素材链接` is
+  present after a creative query; every required header is atomic and read back.
+- The Sheet is created and validated before the document is generated.
 - Formula verification on the Feishu Sheet returns `status: success` when the imported workbook contains formulas.
 - Header style, clipped product names, increase/decrease colors, row counts, and image coverage are checked online.
-- Feishu XML is generated from the same recommendation IDs as the sheet.
+- Feishu XML is generated only after the same Sheet URL passes the sheet gate.
 - The created Feishu document is fetched and reconciled, including its Feishu Sheet link, or a clear Feishu capability blocker is reported.
 
 Normalize the eight recommendation rows read back from `选品池` and the eight
@@ -320,6 +366,16 @@ product ID, type, source row, Chinese name, archetype, action, insight, GMV,
 growth, average price, TR, live/video share, or driver must be repaired and
 read back again. Never send two unreconciled links and ask the user to discover
 the inconsistency.
+
+Create `sheet-delivery-readback.json` from the online workbook and run:
+
+```bash
+node scripts/validate_sheet_delivery.mjs --input "<sheet-delivery-readback.json>"
+```
+
+This must also return `valid: true`. Do not treat a document link, an XLSX that
+was never imported, or a workbook with compound interval/change cells as a
+successful Sheet delivery.
 
 In the final answer, state the exact market/category/period, row counts, image
 coverage, Feishu recommendation count, and the 3–5 strongest merchant

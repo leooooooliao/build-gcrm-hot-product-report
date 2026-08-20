@@ -55,8 +55,12 @@ Preferred path:
 Portable path:
 
 - Use the host's native browser and spreadsheet tooling.
-- Preserve the same JSON contract, four-sheet Feishu Sheet structure, formulas, styling, image policy, and verification requirements.
-- Preserve the displayed average price, midpoint-estimated TR, single action-label system, and concise Feishu-brief contract.
+- Preserve the same JSON contract, four core Feishu Sheet tabs, conditional
+  `素材链接` tab, atomic header contract, formulas, styling, image policy, and
+  verification requirements.
+- Preserve the displayed average price, midpoint-estimated TR, single
+  action-label system, structured local-market analysis, and concise narrative
+  Feishu-brief contract.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
 
 If the host lacks `@oai/artifact-tool`, it may create the online Feishu Sheet

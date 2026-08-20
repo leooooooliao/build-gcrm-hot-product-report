@@ -69,7 +69,11 @@ category fields.
 }
 ```
 
-Keep every numeric interval and change on separate lines exactly as displayed. Use strings for product IDs.
+In source JSON, keep each page metric exactly as displayed: interval/value on
+the first line and its change on the second. This composite source string is
+only an acquisition format. In the final Sheet, split it into atomic columns
+such as `GMV区间` and `GMV变化`; never write both lines into one cell or header.
+Use strings for product IDs.
 
 `avg_price` is the average-price value displayed by GCRM. Preserve that source
 value and its change; do not derive it from GMV and order intervals.
@@ -111,9 +115,19 @@ Do not promote an uncertain join to confirmed.
   "product_id": "1732277424593932739",
   "archetype": "智能自动猫砂盆",
   "action": "仅作标杆",
-  "insight": "长期强痛点、高客单；直播可完整讲清容量、安全与清洁效果。"
+  "insight": "长期强痛点、高客单；直播可完整讲清容量、安全与清洁效果。",
+  "local_context": "美国多猫家庭和大户型场景更容易容纳大体积设备；若无可信节日关联，不强行写节日驱动。",
+  "local_context_status": "searched",
+  "local_context_sources": ["https://example.org/local-context"],
+  "execution_advice": "先核算大件履约、退换货和售后能力，再以对比演示内容小规模验证。"
 }
 ```
+
+`local_context_status` must be `searched` or `unverified`.
+`local_context_sources` is an array with at most two HTTP(S) URLs and may be
+empty. Every recommendation needs distinct `insight`, `local_context`, and
+`execution_advice` fields so weaker models cannot collapse analysis and action
+into one generic sentence.
 
 Allowed actions:
 
@@ -139,8 +153,9 @@ stable `delivery_id`.
 
 The manifest, not a fresh map over ranking rows, is the only source for final
 recommendation metrics and text. Both outputs must reuse its Chinese name,
-archetype, action, insight, GMV/change, average price, TR, live/video shares,
-driver, source banner/rank, order, and delivery ID.
+archetype, action, insight, local context, execution advice, GMV/change,
+average price, TR, live/video shares, driver, source banner/rank, order, and
+delivery ID.
 
 These are the only merchant-facing classification labels. Do not add parallel
 fields such as `机会标签`, `建议级别`, `优先关注`, or `观察`. Non-recommended
