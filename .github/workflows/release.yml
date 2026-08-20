@@ -47,5 +47,5 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             "build-gcrm-hot-product-report.zip" \
             "build-gcrm-hot-product-report.zip.sha256" \
-            --title "类目爆品报告 ${GITHUB_REF_NAME}" \
-            --notes "本版统一推荐调用话术：使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>；旧版自然语言和机器 Skill 名继续兼容。下载 build-gcrm-hot-product-report.zip 并校验同名 SHA-256 后解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。从 v1.4.0 起，Skill 每次调用都会检查此仓库的最新稳定 Release。ZIP 附件的 download_count 会同时包含新安装和版本更新，不等于独立用户数。"
+            --title "爆品助手 ${GITHUB_REF_NAME}" \
+            --notes "本版将用户可见名称统一为“爆品助手”，并新增固定交付导航：报告生成后必须解释飞书文档各部分和电子表格各子表分别解决什么问题，不再只发送两个链接；素材链接页仅在实际存在时说明。推荐调用话术：使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>。下载 build-gcrm-hot-product-report.zip 并校验同名 SHA-256 后解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。从 v1.4.0 起，Skill 每次调用都会检查此仓库的最新稳定 Release。ZIP 附件的 download_count 会同时包含新安装和版本更新，不等于独立用户数。"

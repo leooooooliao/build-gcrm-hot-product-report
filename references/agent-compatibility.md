@@ -2,7 +2,7 @@
 
 ## Natural invocation
 
-The user-facing name is `类目爆品报告`. Do not require users to type the machine identifier.
+The user-facing name is `爆品助手`. Do not require users to type the machine identifier.
 
 Preferred request:
 
@@ -64,6 +64,8 @@ Portable path:
 - Preserve the displayed average price, midpoint-estimated TR, single
   action-label system, structured local-market analysis, and concise narrative
   Feishu-brief contract.
+- Preserve the post-delivery navigation that explains each document section and
+  every delivered Sheet tab; do not hand off unexplained links.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
 
 If the host lacks `@oai/artifact-tool`, it may create the online Feishu Sheet
@@ -104,7 +106,7 @@ The GitHub repository may be public, but the GCRM source page remains access-con
 
 Use this prompt:
 
-> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我实际采用的安装方式，并明确提示以后这样调用：`使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>。`不要声称安装本身获得了 GCRM 或飞书权限。
+> 请安装“爆品助手”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我实际采用的安装方式，并明确提示以后这样调用：`使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>。`不要声称安装本身获得了 GCRM 或飞书权限。
 
 The ZIP asset download is counted automatically by GitHub. No user form or
 manual installation report is required. The metric includes first installs and

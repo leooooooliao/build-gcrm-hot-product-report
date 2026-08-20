@@ -89,6 +89,49 @@ Keep updates short:
 
 Do not narrate browser mechanics unless an interaction failed.
 
+## Final handoff navigation
+
+Do not finish by sending two unexplained links. Immediately after the Feishu
+document and Sheet links, add a compact `这两份交付物怎么用` section so the
+recipient can navigate the report without exploring it first.
+
+Explain the Feishu recommendation document:
+
+- `本期结论`: the three decisions that should be read first.
+- `动作标签怎么理解`: the difference between 快速跟进、条件跟进、小单测试、
+  and 仅作标杆.
+- `标杆品`: mature high-scale products to learn from, not automatic sourcing
+  recommendations.
+- `增长品`: products with current growth signals, including why they matter,
+  local-market context, execution advice, and selected material links.
+- `完整数据与素材`: the entry point to the full Sheet.
+
+Then explain every delivered Sheet tab:
+
+- `结论`: the condensed 2+6 recommendations and category opportunity view.
+- `选品池`: the Product-ID-deduplicated GMV/rising candidate pool; the first
+  eight rows are the official recommendation set.
+- `Top50原始榜单`: the auditable rows and source metrics from the four banners.
+- `使用说明`: metric formulas, interval caveats, and action-label definitions.
+- `素材链接`: when present, up to five valid links for each recommended product.
+
+If `素材链接` was not created, say why in one sentence: the creative query was
+not run or the dashboard was unavailable. Do not describe an absent tab as if
+it exists. Keep the navigation explanation concise and put it before the final
+merchant takeaways or validation details.
+
+Use this compact shape:
+
+> **这两份交付物怎么用**
+>
+> - 飞书文档：先看本期结论，再按标杆品/增长品阅读具体推荐；动作标签说明
+>   解释每个建议的投入方式，文末进入完整数据。
+> - 飞书电子表格：结论看最终推荐，选品池看候选商品，Top50原始榜单做
+>   数据复核，使用说明查口径；素材链接页保留推荐商品的完整有效素材。
+
+Adapt the final sentence when the material tab is absent, but do not omit the
+rest of the navigation.
+
 ## Browser recovery messages
 
 If local browser control is not enabled, ask for one action only:
