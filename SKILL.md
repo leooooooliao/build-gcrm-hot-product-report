@@ -3,7 +3,7 @@ name: build-gcrm-hot-product-report
 description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 or level-2 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “使用CNOB Skill，帮我做一份类目爆品报告”“帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
 ---
 
-# 类目爆品报告
+# 爆品助手
 
 Create one decision-ready report for one market and one exact GCRM level-1 or
 level-2 category. Keep the interaction short and make the output reproducible.
@@ -353,6 +353,8 @@ Require all of the following:
 - Header style, clipped product names, increase/decrease colors, row counts, and image coverage are checked online.
 - Feishu XML is generated only after the same Sheet URL passes the sheet gate.
 - The created Feishu document is fetched and reconciled, including its Feishu Sheet link, or a clear Feishu capability blocker is reported.
+- The final response explains every document section and every delivered Sheet
+  tab using `references/interaction.md`; two bare links are not a complete handoff.
 
 Normalize the eight recommendation rows read back from `选品池` and the eight
 recommendations fetched from the Feishu document into the readback shape in
@@ -381,7 +383,10 @@ This must also return `valid: true`. Do not treat a document link, an XLSX that
 was never imported, or a workbook with compound interval/change cells as a
 successful Sheet delivery.
 
-In the final answer, state the exact market/category/period, row counts, image
-coverage, Feishu recommendation count, and the 3–5 strongest merchant
-takeaways. Link the final Feishu Sheet and Feishu document; do not expose the
-intermediate XLSX/JSON/XML unless Feishu creation is blocked.
+In the final answer, state the exact market/category/period and link the final
+Feishu Sheet and Feishu document. Then follow the mandatory `Final handoff
+navigation` in `references/interaction.md`: explain what every document section
+and every delivered Sheet tab is for so the user never has to discover the
+structure alone. After that, state row counts, image coverage, Feishu
+recommendation count, and the 3–5 strongest merchant takeaways. Do not expose
+the intermediate XLSX/JSON/XML unless Feishu creation is blocked.

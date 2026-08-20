@@ -135,4 +135,9 @@ decide which artifact is correct.
 Return both live URLs. State market, exact category path and level, period, online row
 counts, image coverage, formula-verification result, recommendation count, and
 the shared delivery ID.
+Immediately explain how to use both artifacts: name the five document sections
+and their purpose, then name every delivered Sheet tab and its purpose. Mention
+`素材链接` only when it exists; otherwise state why it was not created. Use the
+fixed navigation contract in `references/interaction.md` and do not return two
+bare links.
 Never expose the intermediate XLSX unless the online delivery failed.
