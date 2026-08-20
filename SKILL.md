@@ -1,6 +1,6 @@
 ---
 name: build-gcrm-hot-product-report
-description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 or level-2 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
+description: Generate a concise merchant-facing GCRM hot-product report for one country, one current GCRM level-1 or level-2 category, and one date range, delivered as a polished Feishu Sheet plus a concise Feishu recommendation document. Use when a user says “使用CNOB Skill，帮我做一份类目爆品报告”“帮我做一份类目爆品报告”“看看 US 宠物用品最近30天卖得好的商品”，或 asks for a 品类日报/月报、爆品榜单、选品报告、Top Product 分析、近期爆品、增长品、直播/短视频驱动判断，或要求从 GCRM Product Insights 榜单抓取、匹配导出并整理成带图片、中英文商品名、客单价与 TR 的飞书表格。
 ---
 
 # 类目爆品报告
@@ -10,7 +10,11 @@ level-2 category. Keep the interaction short and make the output reproducible.
 
 Users do not need to remember the English skill identifier. Treat natural requests such as the following as direct invocations:
 
-> 帮我做一份类目爆品报告吧：国家是 US，类目是宠物用品，时间看最近30天。
+> 使用CNOB Skill，帮我做一份类目爆品报告：国家 US，类目宠物用品，时间最近30天。
+
+Use this as the preferred public invocation wording. Continue to accept legacy
+natural-language requests and the machine identifier so existing users do not
+break after updating.
 
 Read `references/agent-compatibility.md` when installing or running outside Codex.
 Resolve every bundled script and reference relative to the directory containing this `SKILL.md`, regardless of the user's current working directory.

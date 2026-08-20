@@ -6,7 +6,10 @@ The user-facing name is `类目爆品报告`. Do not require users to type the m
 
 Preferred request:
 
-> 帮我做一份类目爆品报告吧：国家是 US，类目是宠物用品，时间看最近30天。
+> 使用CNOB Skill，帮我做一份类目爆品报告：国家 US，类目宠物用品，时间最近30天。
+
+Prefer this exact public wording while keeping older natural-language requests
+and `$build-gcrm-hot-product-report` compatible.
 
 On the first interaction, state that categories follow the current Marketing
 Advisor / GCRM Top Product level-1 and level-2 taxonomy and enumerate the full
@@ -101,7 +104,7 @@ The GitHub repository may be public, but the GCRM source page remains access-con
 
 Use this prompt:
 
-> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我：实际采用的安装方式、如何调用，以及调用时需要输入的国家、GCRM 一级或二级类目和日期；不要声称安装本身获得了 GCRM 或飞书权限。
+> 请安装“类目爆品报告”：先访问 `https://api.github.com/repos/leooooooliao/build-gcrm-hot-product-report/releases/latest`，从返回的 assets 中下载 `build-gcrm-hot-product-report.zip` 和同名 `.sha256`。必须通过 ZIP 的 `browser_download_url` 下载一次，不要用 git clone、GitHub 源码包或逐个 raw 文件替代；校验 SHA-256 后解压。再识别你当前支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，把完整的 `build-gcrm-hot-product-report` 目录放到对应位置；不要默认我是 Codex 用户。如果当前平台不能安装目录型 Skill，就把 `SKILL.md` 作为项目指令，并保持 `scripts/` 与 `references/` 的相对目录不变。安装后请告诉我实际采用的安装方式，并明确提示以后这样调用：`使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>。`不要声称安装本身获得了 GCRM 或飞书权限。
 
 The ZIP asset download is counted automatically by GitHub. No user form or
 manual installation report is required. The metric includes first installs and

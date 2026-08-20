@@ -24,8 +24,10 @@
 直接用自然语言告诉 AI 三项信息即可：
 
 ```text
-帮我做一份类目爆品报告：国家 US，类目宠物用品，时间最近30天。
+使用CNOB Skill，帮我做一份类目爆品报告：国家 US，类目宠物用品，时间最近30天。
 ```
+
+这是推荐的对外调用话术；旧版自然语言和机器 Skill 名仍兼容。
 
 类目识别以营销参谋 GCRM Top Product 当前版本的一级/二级类目为准。输入准确的一级类目时直接执行；输入更具体的二级类目或近似词时，AI 会按既定规则校验或让用户确认，不会静默映射。
 
@@ -59,7 +61,7 @@
 可以把下面这段话直接发给 AI：
 
 ```text
-请从 https://github.com/leooooooliao/build-gcrm-hot-product-report/releases/latest 下载 build-gcrm-hot-product-report.zip，并校验同版本的 SHA-256 文件。请先识别你当前平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再把完整工具包安装到正确位置，不要默认按 Codex 处理。安装完成后，请告诉我以后需要怎样调用，以及必须提供哪些输入信息。
+请从 https://github.com/leooooooliao/build-gcrm-hot-product-report/releases/latest 下载 build-gcrm-hot-product-report.zip，并校验同版本的 SHA-256 文件。请先识别你当前平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再把完整工具包安装到正确位置，不要默认按 Codex 处理。安装完成后，请告诉我实际采用的安装方式，并明确提示以后这样调用：使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>。
 ```
 
 安装和更新都必须使用 [最新稳定 Release](https://github.com/leooooooliao/build-gcrm-hot-product-report/releases/latest) 中的 ZIP 附件，不要使用分支源码、PR 或零散 Raw 文件。

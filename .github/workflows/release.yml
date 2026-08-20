@@ -48,4 +48,4 @@ jobs:
             "build-gcrm-hot-product-report.zip" \
             "build-gcrm-hot-product-report.zip.sha256" \
             --title "类目爆品报告 ${GITHUB_REF_NAME}" \
-            --notes "本版强化飞书交付：完整电子表格成为前置必交付，核心表头按原子字段固定；执行素材查询时新增素材链接表；推荐文档改为标杆品/增长品分段正文，并加入本地市场与季节视角。下载 build-gcrm-hot-product-report.zip 并校验同名 SHA-256 后解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。从 v1.4.0 起，Skill 每次调用都会检查此仓库的最新稳定 Release。ZIP 附件的 download_count 会同时包含新安装和版本更新，不等于独立用户数。"
+            --notes "本版统一推荐调用话术：使用CNOB Skill，帮我做一份类目爆品报告：国家 <国家>，类目 <GCRM一级或二级类目>，时间 <日期范围>；旧版自然语言和机器 Skill 名继续兼容。下载 build-gcrm-hot-product-report.zip 并校验同名 SHA-256 后解压完整工具包。请先识别当前 AI 平台支持的是 Skill、Project Instructions、Agent Rules 还是其他扩展机制，再安装到对应位置；不要默认使用 Codex。从 v1.4.0 起，Skill 每次调用都会检查此仓库的最新稳定 Release。ZIP 附件的 download_count 会同时包含新安装和版本更新，不等于独立用户数。"
