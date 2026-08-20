@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 export const DELIVERY_COUNTS = Object.freeze({ benchmarks: 2, growth: 6, total: 8 });
 
 const allowedActions = new Set(["快速跟进", "条件跟进", "小单测试", "仅作标杆"]);
+const allowedLocalContextStatuses = new Set(["searched", "unverified"]);
 const growthActionPriority = new Map([
   ["快速跟进", 0],
   ["条件跟进", 1],
@@ -76,6 +77,24 @@ function enrichedRecommendation(spec, sourceById, item, group) {
   if (!String(item.insight || "").trim()) {
     throw new Error(`${group} ${productId}: insight is required`);
   }
+  if (!String(item.local_context || "").trim()) {
+    throw new Error(`${group} ${productId}: local_context is required`);
+  }
+  if (!allowedLocalContextStatuses.has(item.local_context_status)) {
+    throw new Error(`${group} ${productId}: local_context_status must be searched or unverified`);
+  }
+  if (!String(item.execution_advice || "").trim()) {
+    throw new Error(`${group} ${productId}: execution_advice is required`);
+  }
+  const localContextSources = item.local_context_sources || [];
+  if (!Array.isArray(localContextSources) || localContextSources.length > 2) {
+    throw new Error(`${group} ${productId}: local_context_sources must be an array with at most 2 URLs`);
+  }
+  for (const source of localContextSources) {
+    if (!/^https?:\/\//i.test(String(source || ""))) {
+      throw new Error(`${group} ${productId}: local_context_sources contains an invalid URL`);
+    }
+  }
   if (group === "标杆" && item.action !== "仅作标杆") {
     throw new Error(`标杆 ${productId}: action must be 仅作标杆`);
   }
@@ -123,6 +142,10 @@ function enrichedRecommendation(spec, sourceById, item, group) {
     archetype: item.archetype,
     action: item.action,
     insight: item.insight,
+    local_context: item.local_context,
+    local_context_status: item.local_context_status,
+    local_context_sources: localContextSources,
+    execution_advice: item.execution_advice,
     source: canonical.source,
     metrics: {
       gmv_range: total.range,
@@ -136,6 +159,16 @@ function enrichedRecommendation(spec, sourceById, item, group) {
       video_share: rounded(videoShare),
       driver,
     },
+  };
+}
+
+function fingerprintRecommendation(item) {
+  return {
+    ...stableRecommendation(item),
+    local_context: item.local_context,
+    local_context_status: item.local_context_status,
+    local_context_sources: item.local_context_sources,
+    execution_advice: item.execution_advice,
   };
 }
 
@@ -195,7 +228,7 @@ export function buildDeliveryManifest(spec) {
     category_path: spec.meta?.category_path || spec.meta?.category,
     period_start: spec.meta?.period_start,
     period_end: spec.meta?.period_end,
-    recommendations: recommendations.map(stableRecommendation),
+    recommendations: recommendations.map(fingerprintRecommendation),
   };
   const deliveryId = crypto
     .createHash("sha256")
@@ -204,7 +237,7 @@ export function buildDeliveryManifest(spec) {
     .slice(0, 12);
 
   return {
-    schema_version: "1.0.0",
+    schema_version: "1.1.0",
     delivery_id: deliveryId,
     counts: DELIVERY_COUNTS,
     meta: {

@@ -84,7 +84,8 @@ Keep updates short:
 1. Filters confirmed.
 2. Banners and row counts collected.
 3. Images, average price, ads cost, midpoint TR, and channel metrics matched.
-4. Feishu Sheet and concise Feishu recommendation document generated and reconciled.
+4. Feishu Sheet created, read back, and validated; then the concise Feishu
+   recommendation document is generated and both artifacts are reconciled.
 
 Do not narrate browser mechanics unless an interaction failed.
 

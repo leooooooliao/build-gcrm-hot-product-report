@@ -113,9 +113,18 @@ When a previous daily snapshot is available, match by `product_id` and add these
 
 Do not use a cumulative multi-month rank as a substitute for snapshot comparison.
 
-## Qualitative insight
+## Structured qualitative analysis
 
-Write one or two sentences per recommended product. Use `推测` for explanations not directly proven by the table.
+Write three short fields per recommended product rather than one blended
+paragraph:
+
+1. `insight`: why the product is worth watching, anchored in its scale, growth,
+   ticket, TR, and channel structure.
+2. `local_context`: a local habit, household/use scenario, weather, season, or
+   occasion lens that helps a Chinese merchant understand the market.
+3. `execution_advice`: the concrete next action and the most important gate.
+
+Use `推测` for explanations not directly proven by the table.
 
 Useful lenses:
 
@@ -135,6 +144,19 @@ Use this sentence pattern:
 > `<data fact>`；推测 `<product/season/content explanation>`；`<merchant action and risk>`.
 
 Never state that weather, holidays, trends, or user preferences caused growth unless separately verified. In the workbook they remain labeled `推测`.
+
+Local context is deliberately lightweight. When search is available, use a
+small number of credible local or authoritative sources and set
+`local_context_status: searched`; the document labels it `AI搜索分析，仅供参考`.
+When search is unavailable, use cautious general knowledge, set
+`local_context_status: unverified`, and label it
+`AI定性分析，未联网核验，仅供参考`. Zero sources is valid. Never block the report
+because an AI cannot search deeply, and never manufacture a seasonal or holiday
+link merely to fill the paragraph.
+
+Prefer local explanatory value over broad slogans: typical home size or living
+arrangement, pet-care habits, climate and outdoor routines, shopping occasions,
+or local compliance/after-sales expectations. Keep it to one compact paragraph.
 
 ## Anti-hallucination gates
 
@@ -163,8 +185,9 @@ Never state that weather, holidays, trends, or user preferences caused growth un
 Use `delivery-manifest.json` as the only source of truth for both final
 artifacts. The Feishu Sheet and brief must contain the same ordered two
 benchmarks and six growth products and the same `delivery_id`. Do not repeat the
-Top 50 table. For each product, show the product ID, canonical source
-banner/rank, Chinese name, image when available, action, GMV/change, displayed
-average price, `TR（估）`, live/video mix, driver, archetype, and the same concise
-reason/action paragraph. Fetch both outputs and run the reconciliation script
-before exposing either link.
+Top 50 table. Put action definitions before product sections, then separate
+`标杆品` and `增长品`. Each product is a compact narrative section with image,
+core metrics, `为什么值得看`, the labeled local-market paragraph,
+`结论与动作`, and one to three material links when available. The complete data
+and all valid material links remain in the Sheet. Fetch both outputs and run the
+reconciliation and Sheet-delivery validators before exposing either link.

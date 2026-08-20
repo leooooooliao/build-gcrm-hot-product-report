@@ -3,6 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
+import { CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS } from "./sheet_contract.mjs";
 
 const COLORS = {
   navy: "#17324D",
@@ -30,10 +31,13 @@ function argsOf(argv) {
 
 const args = argsOf(process.argv.slice(2));
 if (!args.input || !args.output) {
-  throw new Error("Usage: node build_report.mjs --input report.json --output report.xlsx [--preview-dir dir]");
+  throw new Error("Usage: node build_report.mjs --input report.json --output report.xlsx [--preview-dir dir] [--creative-links creative-links.json]");
 }
 
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
+const creativeLinks = args["creative-links"]
+  ? JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"))
+  : null;
 const output = path.resolve(args.output);
 const previewDir = path.resolve(args["preview-dir"] || `${output}.previews`);
 await fs.mkdir(path.dirname(output), { recursive: true });
@@ -186,7 +190,8 @@ const conclusion = workbook.worksheets.add("结论");
 const poolSheet = workbook.worksheets.add("选品池");
 const rawSheet = workbook.worksheets.add("Top50原始榜单");
 const guideSheet = workbook.worksheets.add("使用说明");
-for (const sheet of [conclusion, poolSheet, rawSheet, guideSheet]) {
+const creativeSheet = creativeLinks ? workbook.worksheets.add("素材链接") : null;
+for (const sheet of [conclusion, poolSheet, rawSheet, guideSheet, creativeSheet].filter(Boolean)) {
   sheet.showGridLines = false;
 }
 
@@ -257,16 +262,7 @@ setSubtitle(
   "A2:AI2",
   `${spec.meta.period_start} 至 ${spec.meta.period_end}｜数据保留网页区间｜来源：${spec.meta.source_url}`,
 );
-const rawHeaders = [
-  "榜单", "Rank", "中文商品简称", "Product Name", "Product ID", "一级类目", "二级类目", "三级类目",
-  "GMV区间", "GMV变化", "直播GMV区间", "短视频GMV区间", "商品卡GMV区间",
-  "订单量区间", "平均价格", "广告消耗区间", "退款率区间", "店铺", "图片URL",
-  "匹配质量", "开始日期", "结束日期", "来源页面", "GMV中点（辅助）",
-  "直播GMV中点（辅助）", "短视频GMV中点（辅助）", "商品卡GMV中点（辅助）",
-  "广告消耗中点（辅助）", "上期GMV估算（辅助）", "可比GMV中点（辅助）",
-  "直播占比（估）", "短视频占比（估）", "商品卡占比（估）", "TR（估）", "主要驱动",
-];
-rawSheet.getRange("A4:AI4").values = [rawHeaders];
+rawSheet.getRange("A4:AI4").values = [RAW_HEADERS];
 styleHeader(rawSheet.getRange("A4:AI4"));
 const rawFirst = 5;
 const rawLast = rawFirst + rawRows.length - 1;
@@ -351,15 +347,7 @@ setSubtitle(
   "A2:AE2",
   `GMV Top 50 + 飙升 Top 50 去重｜前8行为固定2标杆+6增长｜交付校验码 ${deliveryManifest.delivery_id}`,
 );
-const poolHeaders = [
-  "来源榜单", "Rank", "图片", "中文商品简称", "Product Name", "Product ID",
-  "二级类目", "三级类目", "建议动作", "GMV区间", "GMV变化", "客单价（网页口径）",
-  "广告消耗区间", "TR（估）", "直播占比（估）", "短视频占比（估）", "主要驱动",
-  "订单量区间", "店铺", "匹配质量", "图片URL", "来源页面", "GMV中点（辅助）",
-  "直播GMV中点（辅助）", "短视频GMV中点（辅助）", "广告消耗中点（辅助）",
-  "交付序号", "推荐类型", "商品原型", "推荐理由与执行建议", "交付校验码",
-];
-poolSheet.getRange("A4:AE4").values = [poolHeaders];
+poolSheet.getRange("A4:AE4").values = [POOL_HEADERS];
 styleHeader(poolSheet.getRange("A4:AE4"));
 const poolFirst = 5;
 const poolLast = poolFirst + poolRows.length - 1;
@@ -375,7 +363,10 @@ const poolValues = poolRows.map(({ banner, row }) => {
     row.join_quality || "", row.image_url, spec.meta.source_url, total.mid,
     metric(row.gmv_live).mid, metric(row.gmv_video).mid, metric(row.ads_cost).mid,
     recommendation?.position || null, recommendation?.group || "", recommendation?.archetype || "",
-    recommendation?.insight || "", recommendation ? deliveryManifest.delivery_id : "",
+    recommendation
+      ? `${recommendation.insight}｜${recommendation.execution_advice}`
+      : "",
+    recommendation ? deliveryManifest.delivery_id : "",
   ];
 });
 poolSheet.getRange(`A${poolFirst}:AE${poolLast}`).values = poolValues;
@@ -686,6 +677,81 @@ guideSheet.getRange("A10:D13").format.rowHeightPx = 50;
 guideSheet.getRange("A16:D19").format.rowHeightPx = 52;
 guideSheet.freezePanes.freezeRows(4);
 
+// Creative links (conditional fifth sheet)
+let creativeRowCount = 0;
+if (creativeSheet) {
+  if (!Array.isArray(creativeLinks.links)) {
+    throw new Error("creative-links.links must be an array");
+  }
+  const validLinks = creativeLinks.links.filter((item) => {
+    const url = String(item?.url || "").trim();
+    return url && !/^null$/i.test(url) && /^https?:\/\//i.test(url);
+  });
+  const creativeRows = deliveryManifest.recommendations.flatMap((recommendation) => {
+    const productLinks = validLinks
+      .filter((item) => String(item.product_id || "") === recommendation.product_id)
+      .sort((a, b) =>
+        Number(a.creative_rank || Number.MAX_SAFE_INTEGER)
+        - Number(b.creative_rank || Number.MAX_SAFE_INTEGER)
+        || Number(b.dollar_revenue || 0) - Number(a.dollar_revenue || 0))
+      .slice(0, 5);
+    const period = creativeLinks.meta?.period_start && creativeLinks.meta?.period_end
+      ? `${creativeLinks.meta.period_start} 至 ${creativeLinks.meta.period_end}`
+      : "未记录";
+    if (!productLinks.length) {
+      return [[
+        recommendation.position, recommendation.group, recommendation.chinese_name, null,
+        0, null, null, "", "0条：看板无有效非NULL素材，不补查", period,
+      ]];
+    }
+    return productLinks.map((item, index) => [
+      recommendation.position, recommendation.group, recommendation.chinese_name, null,
+      productLinks.length, Number(item.creative_rank || index + 1),
+      Number.isFinite(Number(item.dollar_revenue)) ? Number(item.dollar_revenue) : null,
+      String(item.url), "已获取", period,
+    ]);
+  });
+  creativeRowCount = creativeRows.length;
+  setTitle(creativeSheet, "A1:J1", `${spec.meta.country} · ${reportCategoryPath} · 推荐商品素材链接`);
+  setSubtitle(
+    creativeSheet,
+    "A2:J2",
+    `每品最多5条非NULL素材｜完整链接直接保留，不要求逐条打开｜来源：${creativeLinks.meta?.source_url || "素材看板"}`,
+  );
+  creativeSheet.getRange("A4:J4").values = [CREATIVE_HEADERS];
+  styleHeader(creativeSheet.getRange("A4:J4"));
+  const creativeFirst = 5;
+  const creativeLast = creativeFirst + creativeRows.length - 1;
+  creativeSheet.getRange(`A${creativeFirst}:J${creativeLast}`).values = creativeRows;
+  creativeSheet.getRange(`D${creativeFirst}:D${creativeLast}`).formulas =
+    creativeRows.map((_, index) => [asTextFormula(
+      deliveryManifest.recommendations.find((item) => item.position === creativeRows[index][0])?.product_id || "",
+    )]);
+  const creativeTable = creativeSheet.tables.add(`A4:J${creativeLast}`, true, "GcrmCreativeLinks");
+  creativeTable.style = "TableStyleLight1";
+  creativeTable.showBandedRows = false;
+  creativeTable.showFilterButton = true;
+  styleHeader(creativeSheet.getRange("A4:J4"));
+  creativeSheet.getRange(`A${creativeFirst}:J${creativeLast}`).format = {
+    fill: COLORS.white,
+    font: { color: COLORS.gray900, size: 9 },
+    verticalAlignment: "center",
+    wrapText: false,
+    borders: { insideHorizontal: { style: "thin", color: COLORS.gray200 } },
+  };
+  creativeSheet.getRange(`D${creativeFirst}:D${creativeLast}`).format.numberFormat = "@";
+  creativeSheet.getRange(`G${creativeFirst}:G${creativeLast}`).format.numberFormat = '"$"#,##0.00';
+  for (const [column, width] of Object.entries({
+    A: 72, B: 78, C: 210, D: 155, E: 72, F: 72, G: 120, H: 420, I: 200, J: 180,
+  })) {
+    creativeSheet.getRange(`${column}1:${column}${creativeLast}`).format.columnWidthPx = width;
+  }
+  creativeSheet.getRange("A4:J4").format.rowHeightPx = 34;
+  creativeSheet.getRange(`A${creativeFirst}:J${creativeLast}`).format.rowHeightPx = 27;
+  creativeSheet.freezePanes.freezeRows(4);
+  creativeSheet.freezePanes.freezeColumns(4);
+}
+
 // Images
 poolRows.forEach(({ row }, index) => {
   if (row.image_url) {
@@ -772,6 +838,9 @@ const previewSpecs = [
   ["Top50原始榜单", `A1:AI${Math.min(rawLast, 14)}`, "raw.png", 0.75],
   ["使用说明", "A1:D25", "guide.png", 0.9],
 ];
+if (creativeSheet) {
+  previewSpecs.push(["素材链接", `A1:J${Math.min(creativeRowCount + 4, 16)}`, "creative-links.png", 0.85]);
+}
 for (const [sheetName, range, filename, scale] of previewSpecs) {
   const blob = await workbook.render({ sheetName, range, scale, format: "png" });
   await fs.writeFile(
@@ -791,5 +860,7 @@ console.log(JSON.stringify({
   delivery_id: deliveryManifest.delivery_id,
   unique_images: uniqueUrls.length,
   embedded_images: embeddedImages,
+  sheet_names: ["结论", "选品池", "Top50原始榜单", "使用说明", ...(creativeSheet ? ["素材链接"] : [])],
+  creative_rows: creativeRowCount,
   preview_dir: previewDir,
 }));

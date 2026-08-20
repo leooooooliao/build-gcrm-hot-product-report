@@ -29,26 +29,38 @@ map. Do not expose either live URL until section 5 reconciliation passes.
 
 Use the deterministic path below so a weaker agent does not redesign the report:
 
-1. Build and validate the four-sheet XLSX with `scripts/build_report.mjs`.
+1. Print `scripts/validate_sheet_delivery.mjs --print-contract`, then build the
+   XLSX with `scripts/build_report.mjs`. It has four core sheets and, when the
+   creative dashboard was queried, a fifth `素材链接` sheet.
 2. Import that file with the host's native Feishu workbook-import operation.
    With `lark-cli`, use `sheets +workbook-import --file <relative-path>
    --name <report-name> --as user`. Import creates a new Feishu Sheet; it does
    not append to an existing workbook.
 3. Save the returned spreadsheet URL/token. A successful request is not enough:
    wait until the import reports ready.
-4. Run workbook-info on the online spreadsheet and require exactly these sheets,
-   in order: `结论`, `选品池`, `Top50原始榜单`, `使用说明`.
+4. Run workbook-info on the online spreadsheet and require these core sheets in
+   order: `结论`, `选品池`, `Top50原始榜单`, `使用说明`. Extra well-defined
+   sheets are allowed to the right. Require `素材链接` after a creative query.
 5. If the workbook contains formulas, run the host's whole-workbook formula
    verifier. `success` is required; `partial` is not success.
-6. Read back the title/header areas and representative first/last rows from every
-   sheet. The first eight `选品池` rows must match the manifest order and contain
+6. Read back every required header plus representative first/last rows from
+   every sheet. A header cannot contain a line break, and interval/change pairs
+   must be separate cells. The first eight `选品池` rows must match the manifest
+   order and contain
    the delivery position, recommendation type, Product ID, source banner/rank,
    Chinese name, archetype, action, insight, GMV/change, average price, TR,
    live/video shares, driver, and delivery ID.
 
-If import is unavailable but native Sheet creation is available, reproduce the
-same four sheets with typed data and native styles. Do not flatten numeric fields
-into strings merely to simplify writing.
+Create the readback shape defined in `references/sheet-contract.md` and run:
+
+```bash
+node scripts/validate_sheet_delivery.mjs --input "<sheet-delivery-readback.json>"
+```
+
+Require `valid: true` before building the document. If import is unavailable but
+native Sheet creation is available, reproduce the same core sheets with typed
+data and native styles. Do not flatten numeric fields into strings merely to
+simplify writing.
 
 ## 3. Online visual contract
 
@@ -77,18 +89,23 @@ Build the document XML only after the Sheet URL exists:
 node scripts/build_feishu_brief.mjs \
   --input "<report-spec.json>" \
   --output "<feishu-brief.xml>" \
-  --sheet-url "<Feishu Sheet URL>"
+  --sheet-url "<Feishu Sheet URL>" \
+  [--creative-links "<creative-links.json>"]
 ```
 
 Create the document with the authenticated user identity. The final `完整数据`
 section must show a visible link card named `查看完整飞书电子表格`; do not attach
 the intermediate XLSX. Keep the document limited to the period/category/market,
-three conclusions, the same eight recommendations from the fixed 2+6 manifest,
-action definitions, and the metric-method note.
+three conclusions, action definitions, the same eight recommendations from the
+fixed 2+6 manifest, and the metric-method note. Present `标杆品` and `增长品` as
+separate narrative sections, never as a product table. Each product contains an
+image, core metrics, `为什么值得看`, labeled local-market context,
+`结论与动作`, and one to three material links when available.
 
 Fetch the document again and verify the Sheet URL, three conclusions,
-recommendation count, recommendation IDs/names, canonical source banner/rank,
-average price, TR, channel mix, images, action definitions, and delivery ID.
+recommendation count and order, names, average price, TR, channel mix, images,
+local-context labels, action definitions, material links, delivery ID, and the
+same Sheet URL.
 
 ## 5. Mandatory reconciliation
 
@@ -96,8 +113,8 @@ Normalize the online Sheet readback and the fetched Feishu document into two
 JSON files using the exact `Delivery readback contract` in
 `references/data-contract.md`. Read the Sheet from the first eight `选品池`
 rows; do not reconstruct it from the raw ranking tabs. Read all eight document
-recommendations, including the Product ID and source line printed under each
-name.
+recommendations in heading order and match them to the manifest's unique name,
+position, and displayed metrics.
 
 Run:
 

@@ -6,6 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { buildDeliveryManifest, expectedReadback, reconcileDelivery } from "./delivery_contract.mjs";
+import { CORE_SHEET_NAMES, CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS, validateSheetDelivery } from "./sheet_contract.mjs";
 
 const execFileAsync = promisify(execFile);
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,19 @@ function row(productId, rank, gmv, change, averagePrice, adsCost, options = {}) 
     shop_name: `Shop ${productId}`,
     image_url: "https://example.com/image.jpg",
     join_quality: "product_id",
+  };
+}
+
+function recommendation(productId, archetype, action, insight) {
+  return {
+    product_id: productId,
+    archetype,
+    action,
+    insight,
+    local_context: `${productId} 的美国本地使用场景说明；不强行归因于节日或季节。`,
+    local_context_status: "unverified",
+    local_context_sources: [],
+    execution_advice: `${productId} 先核价、履约与内容适配，再按动作标签执行。`,
   };
 }
 
@@ -71,16 +85,16 @@ const spec = {
   summary_bullets: ["结论一", "结论二", "结论三"],
   recommendations: {
     benchmarks: [
-      { product_id: "b2", archetype: "饮水机", action: "仅作标杆", insight: "标杆2" },
-      { product_id: "b1", archetype: "猫砂盆", action: "仅作标杆", insight: "标杆1" },
+      recommendation("b2", "饮水机", "仅作标杆", "标杆2"),
+      recommendation("b1", "猫砂盆", "仅作标杆", "标杆1"),
     ],
     growth: [
-      { product_id: "g6", archetype: "耳部清洁", action: "小单测试", insight: "增长6" },
-      { product_id: "g4", archetype: "猫砂盆", action: "快速跟进", insight: "增长4" },
-      { product_id: "g2", archetype: "猫砂盆", action: "快速跟进", insight: "增长2" },
-      { product_id: "g5", archetype: "猫砂盆", action: "小单测试", insight: "增长5" },
-      { product_id: "g1", archetype: "除臭器", action: "条件跟进", insight: "增长1" },
-      { product_id: "g3", archetype: "胸背带", action: "小单测试", insight: "增长3" },
+      recommendation("g6", "耳部清洁", "小单测试", "增长6"),
+      recommendation("g4", "猫砂盆", "快速跟进", "增长4"),
+      recommendation("g2", "猫砂盆", "快速跟进", "增长2"),
+      recommendation("g5", "猫砂盆", "小单测试", "增长5"),
+      recommendation("g1", "除臭器", "条件跟进", "增长1"),
+      recommendation("g3", "胸背带", "小单测试", "增长3"),
     ],
   },
 };
@@ -92,6 +106,8 @@ assert.equal(manifest.recommendations[2].source_banner, "GMV Top 50");
 assert.equal(manifest.recommendations[2].metrics.gmv_range, "205K");
 assert.equal(manifest.recommendations[2].metrics.gmv_change, 0.298);
 assert.equal(manifest.recommendations[2].product_name, "Product g1");
+assert.equal(manifest.schema_version, "1.1.0");
+assert.equal(manifest.recommendations[2].local_context_status, "unverified");
 
 const readback = expectedReadback(manifest);
 assert.deepEqual(reconcileDelivery(manifest, readback, readback), {
@@ -113,6 +129,31 @@ const zeroGrowth = structuredClone(spec);
 zeroGrowth.rankings["GMV Top 50"][2].gmv_total = "205K\n0%";
 assert.throws(() => buildDeliveryManifest(zeroGrowth), /real positive value/);
 
+const sheetReadback = {
+  delivery_mode: "feishu",
+  sheet_url: "https://example.larksuite.com/sheets/test",
+  creative_query_performed: true,
+  sheets: [
+    { name: "结论", headers: [] },
+    { name: "选品池", headers: POOL_HEADERS },
+    { name: "Top50原始榜单", headers: RAW_HEADERS },
+    { name: "使用说明", headers: [] },
+    { name: "素材链接", headers: CREATIVE_HEADERS },
+  ],
+  expected_raw_rows: 10,
+  actual_raw_rows: 10,
+  recommendation_rows: 8,
+  compound_metric_cells: [],
+  document_created: false,
+};
+assert.equal(validateSheetDelivery(sheetReadback).valid, true);
+const missingCoreSheet = structuredClone(sheetReadback);
+missingCoreSheet.sheets = missingCoreSheet.sheets.filter((item) => item.name !== CORE_SHEET_NAMES[0]);
+assert.match(validateSheetDelivery(missingCoreSheet).errors.join("\n"), /missing core sheet 结论/);
+const compoundMetric = structuredClone(sheetReadback);
+compoundMetric.compound_metric_cells = ["Top50原始榜单!I5"];
+assert.match(validateSheetDelivery(compoundMetric).errors.join("\n"), /expected 0, got 1/);
+
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "gcrm-delivery-contract-"));
 try {
   const specPath = path.join(tempDir, "report-spec.json");
@@ -122,25 +163,54 @@ try {
   const manifestPath = path.join(tempDir, "delivery-manifest.json");
   const sheetReadbackPath = path.join(tempDir, "sheet-readback.json");
   const briefReadbackPath = path.join(tempDir, "brief-readback.json");
+  const sheetDeliveryReadbackPath = path.join(tempDir, "sheet-delivery-readback.json");
+  const creativeLinksPath = path.join(tempDir, "creative-links.json");
   await fs.writeFile(specPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
+  await fs.writeFile(creativeLinksPath, `${JSON.stringify({
+    meta: {
+      source_url: "https://mmm.tiktok-row.net/apps/analytics/biportal/report/edit/1361187",
+      period_start: "2026-07-05",
+      period_end: "2026-08-01",
+    },
+    links: [
+      { product_id: "b1", creative_rank: 1, dollar_revenue: 3200, url: "https://www.tiktok.com/example-b1" },
+      { product_id: "g1", creative_rank: 1, dollar_revenue: 1200, url: "NULL" },
+    ],
+  }, null, 2)}\n`, "utf8");
   await execFileAsync(process.execPath, [
     path.join(scriptDir, "build_feishu_brief.mjs"),
     "--input", specPath,
     "--output", briefPath,
-    "--sheet-url", "https://example.com/sheet",
+    "--sheet-url", "https://example.larksuite.com/sheets/test",
+    "--creative-links", creativeLinksPath,
   ]);
   const briefXml = await fs.readFile(briefPath, "utf8");
-  assert.match(briefXml, /交付校验码 874ad5659748/);
-  assert.match(briefXml, /Product ID g1｜数据源 GMV Top 50 #3/);
-  assert.match(briefXml, /205K \/ \+29\.8%/);
+  assert.match(briefXml, new RegExp(`交付校验码：${manifest.delivery_id}`));
+  assert.match(briefXml, /GMV 205K（\+29\.8%）/);
+  assert.match(briefXml, /为什么值得看/);
+  assert.match(briefXml, /本地市场与季节补充（AI定性分析，未联网核验，仅供参考）/);
+  assert.match(briefXml, /结论与动作/);
+  assert.match(briefXml, /素材1/);
+  assert.match(briefXml, /看板无有效非NULL链接，不补查/);
+  assert.doesNotMatch(briefXml, /<table>/);
   assert.doesNotMatch(briefXml, /Conflicting rising-row copy/);
+  await assert.rejects(
+    execFileAsync(process.execPath, [
+      path.join(scriptDir, "build_feishu_brief.mjs"),
+      "--input", specPath,
+      "--output", path.join(tempDir, "brief-without-sheet.xml"),
+    ]),
+    /Sheet delivery gate failed/,
+  );
   const reportResult = await execFileAsync(process.execPath, [
     path.join(scriptDir, "build_report.mjs"),
     "--input", specPath,
     "--output", reportPath,
     "--preview-dir", previewDir,
+    "--creative-links", creativeLinksPath,
   ], { maxBuffer: 10 * 1024 * 1024 });
-  assert.match(reportResult.stdout, /"delivery_id":"874ad5659748"/);
+  assert.match(reportResult.stdout, new RegExp(`"delivery_id":"${manifest.delivery_id}"`));
+  assert.match(reportResult.stdout, /"素材链接"/);
   assert.ok((await fs.stat(reportPath)).size > 0);
   const metricResult = await execFileAsync(process.execPath, [
     path.join(scriptDir, "validate_metrics.mjs"),
@@ -153,6 +223,7 @@ try {
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   await fs.writeFile(sheetReadbackPath, `${JSON.stringify(readback, null, 2)}\n`, "utf8");
   await fs.writeFile(briefReadbackPath, `${JSON.stringify(readback, null, 2)}\n`, "utf8");
+  await fs.writeFile(sheetDeliveryReadbackPath, `${JSON.stringify(sheetReadback, null, 2)}\n`, "utf8");
   const reconcileResult = await execFileAsync(process.execPath, [
     path.join(scriptDir, "reconcile_delivery.mjs"),
     "--manifest", manifestPath,
@@ -160,6 +231,11 @@ try {
     "--brief", briefReadbackPath,
   ]);
   assert.equal(JSON.parse(reconcileResult.stdout).valid, true);
+  const validateSheetResult = await execFileAsync(process.execPath, [
+    path.join(scriptDir, "validate_sheet_delivery.mjs"),
+    "--input", sheetDeliveryReadbackPath,
+  ]);
+  assert.equal(JSON.parse(validateSheetResult.stdout).valid, true);
 } finally {
   await fs.rm(tempDir, { recursive: true, force: true });
 }
@@ -175,4 +251,7 @@ process.stdout.write(`${JSON.stringify({
   workbook_same_source_test: "passed",
   metric_gate_same_source_test: "passed",
   reconcile_cli_test: "passed",
+  sheet_delivery_gate_test: "passed",
+  atomic_header_contract_test: "passed",
+  creative_links_sheet_and_brief_test: "passed",
 }, null, 2)}\n`);
