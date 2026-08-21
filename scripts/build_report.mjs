@@ -3,6 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
+import { assertCreativeLinks, emptyCreativeStatus } from "./creative_contract.mjs";
 import { CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS } from "./sheet_contract.mjs";
 
 const COLORS = {
@@ -30,14 +31,12 @@ function argsOf(argv) {
 }
 
 const args = argsOf(process.argv.slice(2));
-if (!args.input || !args.output) {
-  throw new Error("Usage: node build_report.mjs --input report.json --output report.xlsx [--preview-dir dir] [--creative-links creative-links.json]");
+if (!args.input || !args.output || !args["creative-links"]) {
+  throw new Error("Usage: node build_report.mjs --input report.json --output report.xlsx --creative-links creative-links.json [--preview-dir dir]");
 }
 
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
-const creativeLinks = args["creative-links"]
-  ? JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"))
-  : null;
+const creativeLinks = JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"));
 const output = path.resolve(args.output);
 const previewDir = path.resolve(args["preview-dir"] || `${output}.previews`);
 await fs.mkdir(path.dirname(output), { recursive: true });
@@ -150,6 +149,7 @@ if (missingTranslations.length) {
 const gmvRows = (spec.rankings["GMV Top 50"] || []).slice(0, 50);
 const risingRows = (spec.rankings["飙升 Top 50"] || []).slice(0, 50);
 const deliveryManifest = buildDeliveryManifest(spec);
+const creativeValidation = assertCreativeLinks(creativeLinks, deliveryManifest.recommendation_ids);
 const poolCandidates = [];
 const poolSeen = new Set();
 for (const item of [
@@ -190,7 +190,7 @@ const conclusion = workbook.worksheets.add("结论");
 const poolSheet = workbook.worksheets.add("选品池");
 const rawSheet = workbook.worksheets.add("Top50原始榜单");
 const guideSheet = workbook.worksheets.add("使用说明");
-const creativeSheet = creativeLinks ? workbook.worksheets.add("素材链接") : null;
+const creativeSheet = workbook.worksheets.add("素材链接");
 for (const sheet of [conclusion, poolSheet, rawSheet, guideSheet, creativeSheet].filter(Boolean)) {
   sheet.showGridLines = false;
 }
@@ -677,12 +677,9 @@ guideSheet.getRange("A10:D13").format.rowHeightPx = 50;
 guideSheet.getRange("A16:D19").format.rowHeightPx = 52;
 guideSheet.freezePanes.freezeRows(4);
 
-// Creative links (conditional fifth sheet)
+// Creative links (mandatory attempt; success, empty, and blocked are valid states)
 let creativeRowCount = 0;
 if (creativeSheet) {
-  if (!Array.isArray(creativeLinks.links)) {
-    throw new Error("creative-links.links must be an array");
-  }
   const validLinks = creativeLinks.links.filter((item) => {
     const url = String(item?.url || "").trim();
     return url && !/^null$/i.test(url) && /^https?:\/\//i.test(url);
@@ -701,7 +698,7 @@ if (creativeSheet) {
     if (!productLinks.length) {
       return [[
         recommendation.position, recommendation.group, recommendation.chinese_name, null,
-        0, null, null, "", "0条：看板无有效非NULL素材，不补查", period,
+        0, null, null, "", emptyCreativeStatus(creativeLinks), period,
       ]];
     }
     return productLinks.map((item, index) => [
@@ -716,7 +713,7 @@ if (creativeSheet) {
   setSubtitle(
     creativeSheet,
     "A2:J2",
-    `每品最多5条非NULL素材｜完整链接直接保留，不要求逐条打开｜来源：${creativeLinks.meta?.source_url || "素材看板"}`,
+    `查询状态：${creativeValidation.query_status}｜每品最多5条非NULL素材｜完整链接直接保留，不要求逐条打开｜来源：${creativeLinks.meta?.source_url}`,
   );
   creativeSheet.getRange("A4:J4").values = [CREATIVE_HEADERS];
   styleHeader(creativeSheet.getRange("A4:J4"));
@@ -862,5 +859,7 @@ console.log(JSON.stringify({
   embedded_images: embeddedImages,
   sheet_names: ["结论", "选品池", "Top50原始榜单", "使用说明", ...(creativeSheet ? ["素材链接"] : [])],
   creative_rows: creativeRowCount,
+  creative_query_status: creativeValidation.query_status,
+  creative_links: creativeValidation.link_count,
   preview_dir: previewDir,
 }));

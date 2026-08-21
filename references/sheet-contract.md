@@ -14,7 +14,7 @@ delivery needs either:
 
 Never mark a document-only result as complete.
 
-## Core and optional sheets
+## Required sheets
 
 Require these core sheets, but allow extra helper sheets:
 
@@ -23,9 +23,10 @@ Require these core sheets, but allow extra helper sheets:
 3. `Top50原始榜单`
 4. `使用说明`
 
-If the creative dashboard was queried, also require `素材链接`. A product with
-no valid non-NULL creative keeps one zero-count status row; do not fabricate or
-keep querying merely to reach five links.
+Also require `素材链接`. It records the mandatory query attempt even when the
+dashboard returns no valid non-NULL URL or remains blocked after one retry. A
+product with no link keeps one zero-count/status row; do not fabricate or keep
+querying merely to reach five links.
 
 ## Atomic cell rule
 
@@ -63,6 +64,7 @@ Normalize the online Sheet or XLSX verification to:
     {"name": "素材链接", "headers": ["推荐序号", "推荐类型"]}
   ],
   "creative_query_performed": true,
+  "creative_query_status": "completed",
   "expected_raw_rows": 150,
   "actual_raw_rows": 150,
   "recommendation_rows": 8,

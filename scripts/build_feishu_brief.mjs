@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
+import { assertCreativeLinks } from "./creative_contract.mjs";
 
 function argsOf(argv) {
   const result = {};
@@ -59,8 +60,8 @@ function validCreativeLinks(creativeLinks, productId) {
 }
 
 const args = argsOf(process.argv.slice(2));
-if (!args.input || !args.output) {
-  throw new Error("Usage: node build_feishu_brief.mjs --input report-spec.json --output brief.xml (--sheet-url URL | --fallback-xlsx path) [--creative-links creative-links.json] [--material-limit 1-3]");
+if (!args.input || !args.output || !args["creative-links"]) {
+  throw new Error("Usage: node build_feishu_brief.mjs --input report-spec.json --output brief.xml (--sheet-url URL | --fallback-xlsx path) --creative-links creative-links.json [--material-limit 1-3]");
 }
 
 const sheetUrl = String(args["sheet-url"] || args["excel-url"] || "").trim();
@@ -85,13 +86,9 @@ if (![1, 2, 3].includes(materialLimit)) {
 }
 
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
-const creativeLinks = args["creative-links"]
-  ? JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"))
-  : null;
-if (creativeLinks && !Array.isArray(creativeLinks.links)) {
-  throw new Error("creative-links.links must be an array");
-}
+const creativeLinks = JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"));
 const deliveryManifest = buildDeliveryManifest(spec);
+const creativeValidation = assertCreativeLinks(creativeLinks, deliveryManifest.recommendation_ids);
 const reportCategoryPath = spec.meta.category_path || spec.meta.category;
 const reportCategoryLevel = Number(spec.meta.category_level || 1);
 const selected = deliveryManifest.recommendations;
@@ -142,10 +139,10 @@ function appendProduct(item) {
   if (materials.length) {
     lines.push(`<p><b>参考素材。</b>${materials.map((material, index) =>
       `<a href="${esc(material.url)}">素材${index + 1}</a>`).join("　")}</p>`);
-  } else if (creativeLinks) {
-    lines.push(`<p><b>参考素材。</b><span text-color="gray">看板无有效非NULL链接，不补查。</span></p>`);
+  } else if (creativeLinks.query_status === "blocked") {
+    lines.push(`<p><b>参考素材。</b><span text-color="gray">素材查询已尝试但受阻：${esc(creativeLinks.blocked_reason)}；主报告照常交付。</span></p>`);
   } else {
-    lines.push(`<p><b>参考素材。</b><span text-color="gray">本次未执行素材查询；不影响主报告交付。</span></p>`);
+    lines.push(`<p><b>参考素材。</b><span text-color="gray">看板查询完成，但该商品无有效非NULL素材，不补查。</span></p>`);
   }
 }
 
@@ -176,5 +173,6 @@ process.stdout.write(`${JSON.stringify({
   recommendations: selected.length,
   sheet_linked: Boolean(sheetUrl),
   fallback_xlsx: fallbackXlsx || null,
-  creative_links_supplied: Boolean(creativeLinks),
+  creative_query_status: creativeValidation.query_status,
+  creative_links: creativeValidation.link_count,
 }, null, 2)}\n`);

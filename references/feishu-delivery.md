@@ -30,8 +30,8 @@ map. Do not expose either live URL until section 5 reconciliation passes.
 Use the deterministic path below so a weaker agent does not redesign the report:
 
 1. Print `scripts/validate_sheet_delivery.mjs --print-contract`, then build the
-   XLSX with `scripts/build_report.mjs`. It has four core sheets and, when the
-   creative dashboard was queried, a fifth `素材链接` sheet.
+   XLSX with `scripts/build_report.mjs`. It has four core sheets plus the
+   required `素材链接` query-result/status sheet.
 2. Import that file with the host's native Feishu workbook-import operation.
    With `lark-cli`, use `sheets +workbook-import --file <relative-path>
    --name <report-name> --as user`. Import creates a new Feishu Sheet; it does
@@ -40,7 +40,7 @@ Use the deterministic path below so a weaker agent does not redesign the report:
    wait until the import reports ready.
 4. Run workbook-info on the online spreadsheet and require these core sheets in
    order: `结论`, `选品池`, `Top50原始榜单`, `使用说明`. Extra well-defined
-   sheets are allowed to the right. Require `素材链接` after a creative query.
+   sheets are allowed to the right. Require `素材链接` in all complete deliveries.
 5. If the workbook contains formulas, run the host's whole-workbook formula
    verifier. `success` is required; `partial` is not success.
 6. Read back every required header plus representative first/last rows from
@@ -90,7 +90,7 @@ node scripts/build_feishu_brief.mjs \
   --input "<report-spec.json>" \
   --output "<feishu-brief.xml>" \
   --sheet-url "<Feishu Sheet URL>" \
-  [--creative-links "<creative-links.json>"]
+  --creative-links "<creative-links.json>"
 ```
 
 Create the document with the authenticated user identity. The final `完整数据`
@@ -136,8 +136,8 @@ Return both live URLs. State market, exact category path and level, period, onli
 counts, image coverage, formula-verification result, recommendation count, and
 the shared delivery ID.
 Immediately explain how to use both artifacts: name the five document sections
-and their purpose, then name every delivered Sheet tab and its purpose. Mention
-`素材链接` only when it exists; otherwise state why it was not created. Use the
-fixed navigation contract in `references/interaction.md` and do not return two
-bare links.
+and their purpose, then name every delivered Sheet tab and its purpose. Explain
+whether `素材链接` records links, an empty query, or a blocker. Use the fixed
+navigation contract in `references/interaction.md` and do not return two bare
+links.
 Never expose the intermediate XLSX unless the online delivery failed.

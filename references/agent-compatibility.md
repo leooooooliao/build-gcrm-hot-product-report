@@ -58,8 +58,8 @@ Preferred path:
 Portable path:
 
 - Use the host's native browser and spreadsheet tooling.
-- Preserve the same JSON contract, four core Feishu Sheet tabs, conditional
-  `素材链接` tab, atomic header contract, formulas, styling, image policy, and
+- Preserve the same JSON contract, four core Feishu Sheet tabs, required
+  `素材链接` query-status tab, atomic header contract, formulas, styling, image policy, and
   verification requirements.
 - Preserve the displayed average price, midpoint-estimated TR, single
   action-label system, structured local-market analysis, and concise narrative
@@ -67,6 +67,9 @@ Portable path:
 - Preserve the post-delivery navigation that explains each document section and
   every delivered Sheet tab; do not hand off unexplained links.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
+- Always attempt the creative query for the fixed eight Product IDs with
+  `Ecommerce Product ID`, never Shop Name. Empty or blocked results do not block
+  the main report, but the attempt and status must be recorded.
 
 If the host lacks `@oai/artifact-tool`, it may create the online Feishu Sheet
 directly with typed data and native styles. If it uses an XLSX transfer artifact,

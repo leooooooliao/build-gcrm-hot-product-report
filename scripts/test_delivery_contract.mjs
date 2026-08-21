@@ -6,6 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { buildDeliveryManifest, expectedReadback, reconcileDelivery } from "./delivery_contract.mjs";
+import { CREATIVE_DASHBOARD_URL, validateCreativeLinks } from "./creative_contract.mjs";
 import { CORE_SHEET_NAMES, CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS, validateSheetDelivery } from "./sheet_contract.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -133,6 +134,7 @@ const sheetReadback = {
   delivery_mode: "feishu",
   sheet_url: "https://example.larksuite.com/sheets/test",
   creative_query_performed: true,
+  creative_query_status: "completed",
   sheets: [
     { name: "结论", headers: [] },
     { name: "选品池", headers: POOL_HEADERS },
@@ -165,18 +167,50 @@ try {
   const briefReadbackPath = path.join(tempDir, "brief-readback.json");
   const sheetDeliveryReadbackPath = path.join(tempDir, "sheet-delivery-readback.json");
   const creativeLinksPath = path.join(tempDir, "creative-links.json");
+  const blockedCreativeLinksPath = path.join(tempDir, "creative-links-blocked.json");
+  const blockedBriefPath = path.join(tempDir, "brief-blocked.xml");
   await fs.writeFile(specPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
-  await fs.writeFile(creativeLinksPath, `${JSON.stringify({
+  const creativeLinks = {
+    schema_version: "1.1.0",
+    query_status: "completed",
+    attempted: true,
+    attempted_at: "2026-08-02T12:00:00Z",
     meta: {
-      source_url: "https://mmm.tiktok-row.net/apps/analytics/biportal/report/edit/1361187",
+      source_url: CREATIVE_DASHBOARD_URL,
       period_start: "2026-07-05",
       period_end: "2026-08-01",
+      filter_field: "Ecommerce Product ID",
+      requested_product_ids: manifest.recommendation_ids,
     },
     links: [
       { product_id: "b1", creative_rank: 1, dollar_revenue: 3200, url: "https://www.tiktok.com/example-b1" },
-      { product_id: "g1", creative_rank: 1, dollar_revenue: 1200, url: "NULL" },
     ],
-  }, null, 2)}\n`, "utf8");
+    counts: Object.fromEntries(manifest.recommendation_ids.map((productId) => [productId, productId === "b1" ? 1 : 0])),
+    blocked_reason: null,
+  };
+  const blockedCreativeLinks = {
+    ...structuredClone(creativeLinks),
+    query_status: "blocked",
+    links: [],
+    counts: Object.fromEntries(manifest.recommendation_ids.map((productId) => [productId, 0])),
+    blocked_reason: "看板在一次安全重试后仍未返回结果",
+  };
+  const emptyCreativeLinks = {
+    ...structuredClone(creativeLinks),
+    query_status: "empty",
+    links: [],
+    counts: Object.fromEntries(manifest.recommendation_ids.map((productId) => [productId, 0])),
+  };
+  assert.equal(validateCreativeLinks(creativeLinks, manifest.recommendation_ids).valid, true);
+  assert.equal(validateCreativeLinks(blockedCreativeLinks, manifest.recommendation_ids).valid, true);
+  assert.equal(validateCreativeLinks(emptyCreativeLinks, manifest.recommendation_ids).valid, true);
+  const skippedCreativeLinks = { ...structuredClone(blockedCreativeLinks), attempted: false };
+  assert.match(validateCreativeLinks(skippedCreativeLinks, manifest.recommendation_ids).errors.join("\n"), /skipped creative query/);
+  const shopNameCreativeLinks = structuredClone(creativeLinks);
+  shopNameCreativeLinks.meta.filter_field = "Shop Name";
+  assert.match(validateCreativeLinks(shopNameCreativeLinks, manifest.recommendation_ids).errors.join("\n"), /not Shop Name/);
+  await fs.writeFile(creativeLinksPath, `${JSON.stringify(creativeLinks, null, 2)}\n`, "utf8");
+  await fs.writeFile(blockedCreativeLinksPath, `${JSON.stringify(blockedCreativeLinks, null, 2)}\n`, "utf8");
   await execFileAsync(process.execPath, [
     path.join(scriptDir, "build_feishu_brief.mjs"),
     "--input", specPath,
@@ -191,16 +225,37 @@ try {
   assert.match(briefXml, /本地市场与季节补充（AI定性分析，未联网核验，仅供参考）/);
   assert.match(briefXml, /结论与动作/);
   assert.match(briefXml, /素材1/);
-  assert.match(briefXml, /看板无有效非NULL链接，不补查/);
+  assert.match(briefXml, /看板查询完成，但该商品无有效非NULL素材，不补查/);
+  assert.doesNotMatch(briefXml, /本次未执行素材查询/);
   assert.doesNotMatch(briefXml, /<table>/);
   assert.doesNotMatch(briefXml, /Conflicting rising-row copy/);
+  await execFileAsync(process.execPath, [
+    path.join(scriptDir, "build_feishu_brief.mjs"),
+    "--input", specPath,
+    "--output", blockedBriefPath,
+    "--sheet-url", "https://example.larksuite.com/sheets/test",
+    "--creative-links", blockedCreativeLinksPath,
+  ]);
+  const blockedBriefXml = await fs.readFile(blockedBriefPath, "utf8");
+  assert.match(blockedBriefXml, /素材查询已尝试但受阻/);
+  assert.match(blockedBriefXml, /主报告照常交付/);
   await assert.rejects(
     execFileAsync(process.execPath, [
       path.join(scriptDir, "build_feishu_brief.mjs"),
       "--input", specPath,
       "--output", path.join(tempDir, "brief-without-sheet.xml"),
+      "--creative-links", creativeLinksPath,
     ]),
     /Sheet delivery gate failed/,
+  );
+  await assert.rejects(
+    execFileAsync(process.execPath, [
+      path.join(scriptDir, "build_feishu_brief.mjs"),
+      "--input", specPath,
+      "--output", path.join(tempDir, "brief-without-creative.xml"),
+      "--sheet-url", "https://example.larksuite.com/sheets/test",
+    ]),
+    /--creative-links/,
   );
   const reportResult = await execFileAsync(process.execPath, [
     path.join(scriptDir, "build_report.mjs"),
@@ -211,7 +266,16 @@ try {
   ], { maxBuffer: 10 * 1024 * 1024 });
   assert.match(reportResult.stdout, new RegExp(`"delivery_id":"${manifest.delivery_id}"`));
   assert.match(reportResult.stdout, /"素材链接"/);
+  assert.match(reportResult.stdout, /"creative_query_status":"completed"/);
   assert.ok((await fs.stat(reportPath)).size > 0);
+  await assert.rejects(
+    execFileAsync(process.execPath, [
+      path.join(scriptDir, "build_report.mjs"),
+      "--input", specPath,
+      "--output", path.join(tempDir, "report-without-creative.xlsx"),
+    ]),
+    /--creative-links/,
+  );
   const metricResult = await execFileAsync(process.execPath, [
     path.join(scriptDir, "validate_metrics.mjs"),
     "--input", specPath,
@@ -236,6 +300,13 @@ try {
     "--input", sheetDeliveryReadbackPath,
   ]);
   assert.equal(JSON.parse(validateSheetResult.stdout).valid, true);
+  await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  const creativeValidationResult = await execFileAsync(process.execPath, [
+    path.join(scriptDir, "validate_creative_links.mjs"),
+    "--input", blockedCreativeLinksPath,
+    "--manifest", manifestPath,
+  ]);
+  assert.equal(JSON.parse(creativeValidationResult.stdout).valid, true);
 } finally {
   await fs.rm(tempDir, { recursive: true, force: true });
 }
@@ -254,4 +325,6 @@ process.stdout.write(`${JSON.stringify({
   sheet_delivery_gate_test: "passed",
   atomic_header_contract_test: "passed",
   creative_links_sheet_and_brief_test: "passed",
+  creative_query_attempt_gate_test: "passed",
+  creative_blocked_nonblocking_test: "passed",
 }, null, 2)}\n`);
