@@ -84,7 +84,9 @@ Keep updates short:
 1. Filters confirmed.
 2. Banners and row counts collected.
 3. Images, average price, ads cost, midpoint TR, and channel metrics matched.
-4. Feishu Sheet created, read back, and validated; then the concise Feishu
+4. Creative query attempted for the fixed 2+6 Product IDs; report completed,
+   empty, or blocked status without stopping the main report.
+5. Feishu Sheet created, read back, and validated; then the concise Feishu
    recommendation document is generated and both artifacts are reconciled.
 
 Do not narrate browser mechanics unless an interaction failed.
@@ -113,11 +115,11 @@ Then explain every delivered Sheet tab:
   eight rows are the official recommendation set.
 - `Top50原始榜单`: the auditable rows and source metrics from the four banners.
 - `使用说明`: metric formulas, interval caveats, and action-label definitions.
-- `素材链接`: when present, up to five valid links for each recommended product.
+- `素材链接`: up to five valid links for each recommended product, or an explicit
+  completed-empty/blocked status when links were unavailable.
 
-If `素材链接` was not created, say why in one sentence: the creative query was
-not run or the dashboard was unavailable. Do not describe an absent tab as if
-it exists. Keep the navigation explanation concise and put it before the final
+An absent `素材链接` tab means the delivery is incomplete; repair it before
+handoff. Keep the navigation explanation concise and put it before the final
 merchant takeaways or validation details.
 
 Use this compact shape:
@@ -127,10 +129,9 @@ Use this compact shape:
 > - 飞书文档：先看本期结论，再按标杆品/增长品阅读具体推荐；动作标签说明
 >   解释每个建议的投入方式，文末进入完整数据。
 > - 飞书电子表格：结论看最终推荐，选品池看候选商品，Top50原始榜单做
->   数据复核，使用说明查口径；素材链接页保留推荐商品的完整有效素材。
+>   数据复核，使用说明查口径；素材链接页保留推荐商品的素材或查询状态。
 
-Adapt the final sentence when the material tab is absent, but do not omit the
-rest of the navigation.
+Do not omit the material tab from a complete delivery.
 
 ## Browser recovery messages
 

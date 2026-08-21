@@ -215,10 +215,24 @@ search was used; otherwise set it to `unverified` and label it
 `AI定性分析，未联网核验，仅供参考`. This paragraph gives Chinese merchants a
 local usage or timing lens; it never proves causality.
 
-After the fixed eight Product IDs exist, optionally query the creative dashboard
-under `references/creative-links.md`. Keep at most five non-NULL URLs per product,
-query no more than five IDs together, and never补查 merely to fill five links.
-Material collection enriches the report but never blocks the main GCRM delivery.
+After the fixed eight Product IDs exist, always attempt the creative-dashboard
+query under `references/creative-links.md`. Filter with `Ecommerce Product ID`,
+not Shop Name, and query the eight IDs in no more than two batches of at most
+five. The required outcome is an attempted-query status record, not five links
+per product: `completed`, `empty`, and `blocked` are all valid states. One safe
+retry is the maximum. Empty, partial, NULL-only, or blocked results never stop
+the main GCRM report, but skipping the attempt is not valid.
+
+Store the attempt as `creative-links.json`, then run:
+
+```bash
+node scripts/validate_creative_links.mjs \
+  --input "<creative-links.json>" \
+  --manifest "<delivery-manifest.json>"
+```
+
+Do not build either final artifact until this reports `valid: true`. A blocked
+status with a concise reason passes validation and preserves the main delivery.
 
 ## 4. Build the verified spreadsheet source
 
@@ -235,7 +249,7 @@ node scripts/build_report.mjs \
   --input "<report-spec.json>" \
   --output "<output.xlsx>" \
   --preview-dir "<preview-dir>" \
-  [--creative-links "<creative-links.json>"]
+  --creative-links "<creative-links.json>"
 ```
 
 The builder consumes the same deterministic delivery contract as
@@ -260,11 +274,12 @@ The workbook must contain these four core sheets:
 3. `Top50原始榜单`
 4. `使用说明`
 
-Additional well-defined sheets are allowed to the right. If the creative
-dashboard was queried, `素材链接` is required as a fifth sheet; a product with
-zero valid URLs keeps an explicit zero-link status and is not补查.
+`素材链接` is required as the fifth sheet and records the mandatory attempt.
+It keeps valid links when found, an explicit zero-link state after an empty
+query, or the concise blocker after a failed query. Additional well-defined
+sheets are allowed to the right.
 
-For `选品池`, `Top50原始榜单`, and conditional `素材链接`, use the exact core
+For `选品池`, `Top50原始榜单`, and `素材链接`, use the exact core
 headers exported by `scripts/sheet_contract.mjs`. One cell carries one semantic
 field: GMV interval and GMV change must be different cells, as must every other
 interval/change pair. Auxiliary columns may be appended to the right, but core
@@ -285,8 +300,8 @@ Keep the established visual contract:
 
 Read `references/feishu-delivery.md`. The two normal final deliverables are:
 
-1. A polished Feishu Sheet containing the complete core report and conditional
-   material-link sheet.
+1. A polished Feishu Sheet containing the complete core report and material
+   query result/status sheet.
 2. A concise Feishu document generated from the same `report-spec.json` and
    linked to that Feishu Sheet. It is not a copy of the full table and must not
    contain a Top 50 table.
@@ -303,7 +318,7 @@ node scripts/build_feishu_brief.mjs \
   --input "<report-spec.json>" \
   --output "<feishu-brief.xml>" \
   --sheet-url "<created Feishu Sheet URL>" \
-  [--creative-links "<creative-links.json>"]
+  --creative-links "<creative-links.json>"
 ```
 
 The document builder refuses to run without a live Sheet URL or an explicit
@@ -346,8 +361,9 @@ Require all of the following:
 - Key conclusion values reconcile with the GMV Top 50 source.
 - The XLSX archive passes an integrity check.
 - Embedded-image count is reported.
-- The Feishu Sheet contains all four core sheets; conditional `素材链接` is
-  present after a creative query; every required header is atomic and read back.
+- The Feishu Sheet contains all four core sheets plus `素材链接`; the latter
+  shows completed, empty, or blocked query state; every required header is
+  atomic and read back.
 - The Sheet is created and validated before the document is generated.
 - Formula verification on the Feishu Sheet returns `status: success` when the imported workbook contains formulas.
 - Header style, clipped product names, increase/decrease colors, row counts, and image coverage are checked online.

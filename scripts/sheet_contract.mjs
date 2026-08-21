@@ -5,7 +5,8 @@ export const CORE_SHEET_NAMES = Object.freeze([
   "使用说明",
 ]);
 
-export const OPTIONAL_SHEET_NAMES = Object.freeze(["素材链接"]);
+export const REQUIRED_ENRICHMENT_SHEET_NAMES = Object.freeze(["素材链接"]);
+export const OPTIONAL_SHEET_NAMES = Object.freeze([]);
 
 export const POOL_HEADERS = Object.freeze([
   "来源榜单", "Rank", "图片", "中文商品简称", "Product Name", "Product ID",
@@ -32,8 +33,9 @@ export const CREATIVE_HEADERS = Object.freeze([
 ]);
 
 export const SHEET_CONTRACT = Object.freeze({
-  schema_version: "1.0.0",
+  schema_version: "1.1.0",
   core_sheets: CORE_SHEET_NAMES,
+  required_enrichment_sheets: REQUIRED_ENRICHMENT_SHEET_NAMES,
   optional_sheets: OPTIONAL_SHEET_NAMES,
   required_headers: {
     选品池: POOL_HEADERS,
@@ -43,7 +45,7 @@ export const SHEET_CONTRACT = Object.freeze({
   rules: [
     "一个单元格只承载一个指标；禁止把区间和变化率换行写在同一格",
     "核心子表必须全部存在；允许在其后追加合理的辅助子表",
-    "执行过素材查询时必须有素材链接子表；无有效链接时保留0条状态",
+    "素材查询必须尝试，素材链接子表必须存在；成功、空结果或受阻都保留状态",
     "允许在固定核心字段右侧追加辅助字段，但不得删除、合并或重命名核心字段",
   ],
 });
@@ -84,8 +86,14 @@ export function validateSheetDelivery(readback) {
   for (const required of CORE_SHEET_NAMES) {
     if (!names.includes(required)) errors.push(`sheets: missing core sheet ${required}`);
   }
-  if (readback?.creative_query_performed && !names.includes("素材链接")) {
-    errors.push("sheets: 素材链接 is required after a creative query");
+  if (readback?.creative_query_performed !== true) {
+    errors.push("creative_query_performed: must be true; completed, empty, and blocked are valid outcomes");
+  }
+  if (!["completed", "empty", "blocked"].includes(String(readback?.creative_query_status || ""))) {
+    errors.push("creative_query_status: expected completed, empty, or blocked");
+  }
+  if (!names.includes("素材链接")) {
+    errors.push("sheets: 素材链接 is required to record the creative query outcome");
   }
 
   for (const [sheetName, required] of Object.entries(SHEET_CONTRACT.required_headers)) {
