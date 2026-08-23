@@ -127,7 +127,8 @@ For every banner, verify that ranks are unique and ascending, no unexplained gap
 ## 3. Normalize and analyze
 
 Read `references/data-contract.md`, `references/translation-rules.md`,
-`references/analysis-rules.md`, and `references/creative-links.md`.
+`references/analysis-rules.md`, `references/market-signals.md`,
+`references/data-query-routing.md`, and `references/creative-links.md`.
 
 Create one JSON input matching the contract. Preserve blurred intervals exactly as displayed. Use interval midpoints only for calculations:
 
@@ -215,13 +216,41 @@ search was used; otherwise set it to `unverified` and label it
 `AI定性分析，未联网核验，仅供参考`. This paragraph gives Chinese merchants a
 local usage or timing lens; it never proves causality.
 
+Perform one lightweight capability-aware recent-market check and store it as
+`market_context` in the report spec. When search exists, use at most three query
+families and retain at most three signals that pass every gate in
+`references/market-signals.md`: same country, exact category or recommended
+archetype match, dated usable source, and a concrete change to follow/test/avoid,
+timing, inventory, content, price, or compliance. Amazon is only one possible
+local platform signal; do not force it into every country. If nothing passes,
+record `empty` and omit the section. `unavailable` and `blocked` are also valid
+and never stop the main report. Run:
+
+```bash
+node scripts/validate_market_context.mjs --input "<report-spec.json>"
+```
+
+Do not continue until the market-context record is structurally valid. This
+validation requires a real capability check, not a fabricated news section.
+
 After the fixed eight Product IDs exist, always attempt the creative-dashboard
-query under `references/creative-links.md`. Filter with `Ecommerce Product ID`,
-not Shop Name, and query the eight IDs in no more than two batches of at most
-five. The required outcome is an attempted-query status record, not five links
-per product: `completed`, `empty`, and `blocked` are all valid states. One safe
-retry is the maximum. Empty, partial, NULL-only, or blocked results never stop
-the main GCRM report, but skipping the attempt is not valid.
+query under `references/creative-links.md`. First inspect the current host for
+`crm-data-query`. When it exists, the actual query instruction must begin
+`用crm-data-query取数：https://mmm.tiktok-row.net/apps/analytics/biportal/report/edit/1361187`
+and explicitly set `Pdate` plus `Ecommerce Product ID`; do not substitute Shop
+Name. Query the eight IDs in no more than two batches of at most five. Validate
+the returned filter echo, IDs, three required fields, non-NULL URLs and per-item
+Top 5 before accepting it. If the preferred query fails after one exact retry,
+use the authenticated-browser route and record the fallback. When the capability
+is absent, use the browser route immediately. GCRM Top Product itself remains on
+the existing browser/API/export route because `crm-data-query` cannot currently
+collect that source.
+
+The required outcome is an attempted-query status record, not five links per
+product: `completed`, `empty`, and `blocked` are all valid states. Empty,
+partial, NULL-only, or blocked results never stop the main GCRM report, but
+skipping capability preflight or skipping `crm-data-query` when available is not
+valid.
 
 Store the attempt as `creative-links.json`, then run:
 
@@ -329,14 +358,16 @@ The brief must contain only:
 
 1. Market, exact GCRM category path and level, period, and taxonomy snapshot.
 2. The same three conclusion bullets as the Feishu Sheet.
-3. The four action definitions before the product sections.
-4. Exactly eight narrative recommendation sections in manifest order: two
+3. Zero to three recent market signals after the conclusions only when they pass
+   the strict relevance gate; omit the entire section otherwise.
+4. The four action definitions before the product sections.
+5. Exactly eight narrative recommendation sections in manifest order: two
    benchmarks followed by six growth products. Never use a product table.
-5. For every recommendation: image when available, Chinese name, action, GMV
+6. For every recommendation: image when available, Chinese name, action, GMV
    interval/change, displayed average price, `TR（估）`, live/video shares,
    driver, `为什么值得看`, the labeled local-market paragraph, `结论与动作`, and
    one to three material links when available (default two).
-6. A visible link card to the complete Feishu Sheet, which keeps all valid
+7. A visible link card to the complete Feishu Sheet, which keeps all valid
    material links and full data.
 
 Create the document with the host's authenticated Feishu/Lark document tool.

@@ -28,6 +28,16 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
     "1732277424593932739": "PetPivot开放式自动清洁猫砂盆"
   },
   "summary_bullets": ["...", "...", "..."],
+  "market_context": {
+    "schema_version": "1.0.0",
+    "search_available": true,
+    "attempted": true,
+    "attempted_at": "2026-07-28T10:30:00+07:00",
+    "queries": ["US pet supplies recent platform trend"],
+    "status": "empty",
+    "signals": [],
+    "blocked_reason": null
+  },
   "recommendations": {
     "benchmarks": [],
     "growth": []
@@ -37,6 +47,12 @@ Pass one UTF-8 JSON file to `scripts/build_report.mjs`.
   }
 }
 ```
+
+`market_context` is required so a report records whether lightweight recent
+market research was possible and attempted. Read `market-signals.md`. A valid
+`empty`, `unavailable`, or `blocked` state never blocks the main report, and the
+Feishu document omits the section when `signals` is empty. Do not add weak news
+merely to make the section visible.
 
 For a level-2 report, use the confirmed full breadcrumb for both `category`
 and `category_path`, for example `宠物用品 > 猫狗食品`; set

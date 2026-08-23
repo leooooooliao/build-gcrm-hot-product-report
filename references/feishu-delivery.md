@@ -83,6 +83,11 @@ images for row-bound product pictures. Report online image coverage after repair
 
 ## 4. Create the Feishu document
 
+Require a valid `market_context` record before building the document. When one
+to three signals passed the strict relevance gate, render `近期市场信号` after
+`本期结论`; when none passed, omit the section completely. Never convert an
+empty signal set into a generic news summary.
+
 Build the document XML only after the Sheet URL exists:
 
 ```bash
@@ -96,13 +101,14 @@ node scripts/build_feishu_brief.mjs \
 Create the document with the authenticated user identity. The final `完整数据`
 section must show a visible link card named `查看完整飞书电子表格`; do not attach
 the intermediate XLSX. Keep the document limited to the period/category/market,
-three conclusions, action definitions, the same eight recommendations from the
-fixed 2+6 manifest, and the metric-method note. Present `标杆品` and `增长品` as
+three conclusions, optional validated recent market signals, action definitions,
+the same eight recommendations from the fixed 2+6 manifest, and the metric-method note. Present `标杆品` and `增长品` as
 separate narrative sections, never as a product table. Each product contains an
 image, core metrics, `为什么值得看`, labeled local-market context,
 `结论与动作`, and one to three material links when available.
 
-Fetch the document again and verify the Sheet URL, three conclusions,
+Fetch the document again and verify the Sheet URL, three conclusions, any
+rendered market signals and source links,
 recommendation count and order, names, average price, TR, channel mix, images,
 local-context labels, action definitions, material links, delivery ID, and the
 same Sheet URL.

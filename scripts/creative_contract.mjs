@@ -7,6 +7,12 @@ export const CREATIVE_QUERY_STATUSES = Object.freeze([
   "blocked",
 ]);
 
+export const CREATIVE_QUERY_ROUTES = Object.freeze([
+  "crm-data-query",
+  "browser",
+  "crm-data-query+browser",
+]);
+
 function normalizedIds(value) {
   return Array.isArray(value)
     ? value.map((item) => String(item ?? "").trim()).filter(Boolean)
@@ -24,9 +30,12 @@ export function validateCreativeLinks(record, recommendationIds) {
   const requestedIds = normalizedIds(record?.meta?.requested_product_ids);
   const links = Array.isArray(record?.links) ? record.links : [];
   const status = String(record?.query_status || "").trim();
+  const routing = record?.routing || {};
+  const route = String(routing.query_route || "").trim();
+  const prompts = Array.isArray(routing.query_prompts) ? routing.query_prompts : [];
 
-  if (record?.schema_version !== "1.1.0") {
-    errors.push("schema_version: expected 1.1.0");
+  if (record?.schema_version !== "1.2.0") {
+    errors.push("schema_version: expected 1.2.0");
   }
   if (record?.attempted !== true) {
     errors.push("attempted: must be true; a skipped creative query is not a valid delivery state");
@@ -36,6 +45,68 @@ export function validateCreativeLinks(record, recommendationIds) {
   }
   if (!record?.attempted_at || !Number.isFinite(Date.parse(record.attempted_at))) {
     errors.push("attempted_at: valid ISO timestamp required");
+  }
+  if (routing.capability_checked !== true) {
+    errors.push("routing.capability_checked: must be true before querying the dashboard");
+  }
+  if (typeof routing.crm_data_query_available !== "boolean") {
+    errors.push("routing.crm_data_query_available: boolean required");
+  }
+  if (typeof routing.crm_data_query_attempted !== "boolean") {
+    errors.push("routing.crm_data_query_attempted: boolean required");
+  }
+  if (!CREATIVE_QUERY_ROUTES.includes(route)) {
+    errors.push(`routing.query_route: expected one of ${CREATIVE_QUERY_ROUTES.join(", ")}`);
+  }
+  if (!Array.isArray(routing.query_prompts)) {
+    errors.push("routing.query_prompts: array required");
+  }
+  if (routing.crm_data_query_available === true && routing.crm_data_query_attempted !== true) {
+    errors.push("routing.crm_data_query_attempted: must be true when crm-data-query is available");
+  }
+  if (routing.crm_data_query_available === false && routing.crm_data_query_attempted === true) {
+    errors.push("routing.crm_data_query_attempted: cannot be true when crm-data-query is unavailable");
+  }
+  if (route === "browser" && routing.crm_data_query_available !== false) {
+    errors.push("routing.query_route: browser-only is valid only when crm-data-query is unavailable");
+  }
+  if (route === "crm-data-query" && routing.crm_data_query_attempted !== true) {
+    errors.push("routing.query_route: crm-data-query requires a recorded crm-data-query attempt");
+  }
+  if (route === "crm-data-query+browser") {
+    if (routing.crm_data_query_attempted !== true) {
+      errors.push("routing.query_route: crm-data-query+browser requires a crm-data-query attempt");
+    }
+    if (!String(routing.fallback_reason || "").trim()) {
+      errors.push("routing.fallback_reason: required for crm-data-query+browser fallback");
+    }
+  } else if (String(routing.fallback_reason || "").trim()) {
+    errors.push("routing.fallback_reason: only allowed for crm-data-query+browser fallback");
+  }
+  if (routing.crm_data_query_attempted === true) {
+    if (prompts.length < 1 || prompts.length > 2) {
+      errors.push("routing.query_prompts: one or two crm-data-query prompts required");
+    }
+    const joinedPrompts = prompts.join("\n");
+    prompts.forEach((prompt, index) => {
+      const text = String(prompt || "").trim();
+      if (!text.startsWith(`用crm-data-query取数：${CREATIVE_DASHBOARD_URL}`)) {
+        errors.push(`routing.query_prompts[${index}]: must start with the literal crm-data-query instruction and dashboard URL`);
+      }
+      if (!text.includes("Pdate") || !text.includes("Ecommerce Product ID")) {
+        errors.push(`routing.query_prompts[${index}]: must set Pdate and Ecommerce Product ID`);
+      }
+    });
+    for (const id of expectedIds) {
+      if (!joinedPrompts.includes(id)) {
+        errors.push(`routing.query_prompts: missing requested Product ID ${id}`);
+      }
+    }
+  } else if (prompts.length !== 0) {
+    errors.push("routing.query_prompts: must be empty when crm-data-query was not attempted");
+  }
+  if (status === "blocked" && routing.crm_data_query_available === true && route !== "crm-data-query+browser") {
+    errors.push("routing.query_route: a blocked crm-data-query result must attempt the browser fallback before delivery");
   }
   if (String(record?.meta?.source_url || "").replace(/\/$/, "") !== CREATIVE_DASHBOARD_URL) {
     errors.push("meta.source_url: unexpected creative dashboard URL");
@@ -107,6 +178,9 @@ export function validateCreativeLinks(record, recommendationIds) {
     valid: errors.length === 0,
     query_status: status || null,
     attempted: record?.attempted === true,
+    query_route: route || null,
+    crm_data_query_available: routing.crm_data_query_available,
+    crm_data_query_attempted: routing.crm_data_query_attempted,
     requested_product_ids: requestedIds,
     link_count: links.length,
     products_with_links: Object.values(counts).filter((count) => count > 0).length,

@@ -158,6 +158,20 @@ Prefer local explanatory value over broad slogans: typical home size or living
 arrangement, pet-care habits, climate and outdoor routines, shopping occasions,
 or local compliance/after-sales expectations. Keep it to one compact paragraph.
 
+## Recent market-signal layer
+
+Read `market-signals.md`. This category-level layer is separate from each
+product's local-context paragraph. It adds at most three recent demand,
+platform, or risk signals only when they map to the requested market and exact
+category or a recommended product archetype, have a dated source, and change a
+merchant action. Facts come from the source; `why_it_matters` and
+`merchant_action` are labeled AI analysis. Never infer that a news item caused
+the observed GCRM growth.
+
+Do not block the report when search is unavailable, blocked, or produces zero
+relevant signals. Omit the document section rather than padding it with broad
+industry growth, company news, or unrelated Amazon rankings.
+
 ## Anti-hallucination gates
 
 - No `product_id`: do not call the match confirmed.

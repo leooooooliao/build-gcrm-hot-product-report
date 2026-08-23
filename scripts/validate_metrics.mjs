@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
+import { validateMarketContext } from "./market_context_contract.mjs";
 
 const banners = ["GMV Top 50", "销量 Top 50", "广告消耗 Top 50", "飙升 Top 50"];
 
@@ -50,6 +51,9 @@ if (!args.input) {
 const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
 const errors = [];
 const allRows = [];
+
+const marketContextValidation = validateMarketContext(spec.market_context);
+errors.push(...marketContextValidation.errors);
 
 const categoryLevel = Number(spec.meta?.category_level);
 const categoryLevelOne = String(spec.meta?.category_l1 || "").trim();
@@ -147,6 +151,8 @@ const result = {
   delivery_id: deliveryManifest?.delivery_id || null,
   recommendation_ids: deliveryManifest?.recommendation_ids || [],
   recommendation_metric_sample: sample,
+  market_context_status: marketContextValidation.status,
+  market_signal_count: marketContextValidation.signal_count,
   errors,
 };
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

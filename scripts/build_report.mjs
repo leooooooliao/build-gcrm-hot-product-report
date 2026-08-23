@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
 import { assertCreativeLinks, emptyCreativeStatus } from "./creative_contract.mjs";
+import { assertMarketContext } from "./market_context_contract.mjs";
 import { CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS } from "./sheet_contract.mjs";
 
 const COLORS = {
@@ -150,6 +151,7 @@ const gmvRows = (spec.rankings["GMV Top 50"] || []).slice(0, 50);
 const risingRows = (spec.rankings["飙升 Top 50"] || []).slice(0, 50);
 const deliveryManifest = buildDeliveryManifest(spec);
 const creativeValidation = assertCreativeLinks(creativeLinks, deliveryManifest.recommendation_ids);
+const marketContextValidation = assertMarketContext(spec.market_context);
 const poolCandidates = [];
 const poolSeen = new Set();
 for (const item of [
@@ -713,7 +715,7 @@ if (creativeSheet) {
   setSubtitle(
     creativeSheet,
     "A2:J2",
-    `查询状态：${creativeValidation.query_status}｜每品最多5条非NULL素材｜完整链接直接保留，不要求逐条打开｜来源：${creativeLinks.meta?.source_url}`,
+    `查询状态：${creativeValidation.query_status}｜取数路由：${creativeValidation.query_route}｜每品最多5条非NULL素材｜完整链接直接保留，不要求逐条打开｜来源：${creativeLinks.meta?.source_url}`,
   );
   creativeSheet.getRange("A4:J4").values = [CREATIVE_HEADERS];
   styleHeader(creativeSheet.getRange("A4:J4"));
@@ -861,5 +863,8 @@ console.log(JSON.stringify({
   creative_rows: creativeRowCount,
   creative_query_status: creativeValidation.query_status,
   creative_links: creativeValidation.link_count,
+  creative_query_route: creativeValidation.query_route,
+  market_context_status: marketContextValidation.status,
+  market_signals: marketContextValidation.signal_count,
   preview_dir: previewDir,
 }));

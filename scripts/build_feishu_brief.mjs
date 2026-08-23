@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { buildDeliveryManifest } from "./delivery_contract.mjs";
 import { assertCreativeLinks } from "./creative_contract.mjs";
+import { assertMarketContext } from "./market_context_contract.mjs";
 
 function argsOf(argv) {
   const result = {};
@@ -89,6 +90,7 @@ const spec = JSON.parse(await fs.readFile(path.resolve(args.input), "utf8"));
 const creativeLinks = JSON.parse(await fs.readFile(path.resolve(args["creative-links"]), "utf8"));
 const deliveryManifest = buildDeliveryManifest(spec);
 const creativeValidation = assertCreativeLinks(creativeLinks, deliveryManifest.recommendation_ids);
+const marketContextValidation = assertMarketContext(spec.market_context);
 const reportCategoryPath = spec.meta.category_path || spec.meta.category;
 const reportCategoryLevel = Number(spec.meta.category_level || 1);
 const selected = deliveryManifest.recommendations;
@@ -104,9 +106,31 @@ const lines = [
 for (const [index, bullet] of (spec.summary_bullets || []).slice(0, 3).entries()) {
   lines.push(`<p><b>${index + 1}.</b> ${esc(bullet)}</p>`);
 }
+lines.push(`</callout>`);
+
+if (marketContextValidation.signal_count > 0) {
+  lines.push(
+    `<h1>二、近期市场信号</h1>`,
+    `<p><span text-color="gray">AI搜索分析，仅保留能改变商家跟进、测试、避险或时点判断的当地信号；不证明榜单增长的因果。</span></p>`,
+  );
+  for (const signal of spec.market_context.signals) {
+    lines.push(
+      `<h2>${esc(signal.signal_type)}｜${esc(signal.title)}</h2>`,
+      `<p><b>发生了什么。</b>${esc(signal.what_changed)}</p>`,
+      `<p><b>为什么与本报告有关。</b>${esc(signal.why_it_matters)}</p>`,
+      `<p><b>商家动作。</b>${esc(signal.merchant_action)}</p>`,
+      `<p><span text-color="gray">${esc(signal.date)}｜${esc(signal.source_name)}｜相关性 ${esc(signal.relevance_score)}/6｜置信度 ${esc(signal.confidence)}</span>　<a href="${esc(signal.source_url)}">查看来源</a></p>`,
+    );
+  }
+}
+
+const actionSection = marketContextValidation.signal_count > 0 ? "三" : "二";
+const benchmarkSection = marketContextValidation.signal_count > 0 ? "四" : "三";
+const growthSection = marketContextValidation.signal_count > 0 ? "五" : "四";
+const dataSection = marketContextValidation.signal_count > 0 ? "六" : "五";
+
 lines.push(
-  `</callout>`,
-  `<h1>二、动作标签怎么理解</h1>`,
+  `<h1>${actionSection}、动作标签怎么理解</h1>`,
   `<p><b><span text-color="green">快速跟进</span></b>：规模与增长成立、场景清楚且可复制；优先找同原型或差异化款。</p>`,
   `<p><b><span text-color="orange">条件跟进</span></b>：机会成立，但依赖主播、供应链、售后或合规能力；先确认门槛。</p>`,
   `<p><b><span text-color="blue">小单测试</span></b>：增速亮眼但规模、基数或稳定性不足；先用小库存和内容测试。</p>`,
@@ -147,13 +171,13 @@ function appendProduct(item) {
 }
 
 for (const group of ["标杆", "增长"]) {
-  lines.push(`<h1>${group === "标杆" ? "三、标杆品" : "四、增长品"}</h1>`);
+  lines.push(`<h1>${group === "标杆" ? `${benchmarkSection}、标杆品` : `${growthSection}、增长品`}</h1>`);
   for (const item of selected.filter((recommendation) => recommendation.group === group)) {
     appendProduct(item);
   }
 }
 
-lines.push(`<h1>五、完整数据与素材</h1>`);
+lines.push(`<h1>${dataSection}、完整数据与素材</h1>`);
 if (sheetUrl) {
   lines.push(`<p><a type="url-preview" href="${esc(sheetUrl)}">查看完整飞书电子表格</a></p>`);
 } else {
@@ -175,4 +199,6 @@ process.stdout.write(`${JSON.stringify({
   fallback_xlsx: fallbackXlsx || null,
   creative_query_status: creativeValidation.query_status,
   creative_links: creativeValidation.link_count,
+  market_context_status: marketContextValidation.status,
+  market_signals: marketContextValidation.signal_count,
 }, null, 2)}\n`);

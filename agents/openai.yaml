@@ -1,6 +1,6 @@
 interface:
   display_name: "爆品助手"
-  short_description: "输入国家、类目和时间，生成完整飞书表格与本地视角爆品报告"
+  short_description: "输入国家、类目和时间，生成含素材与近期市场信号的飞书爆品报告"
   default_prompt: "使用CNOB Skill（$build-gcrm-hot-product-report），帮我做一份类目爆品报告：国家 US，类目宠物用品，时间最近30天。"
 policy:
   allow_implicit_invocation: true

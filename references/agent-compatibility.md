@@ -67,9 +67,16 @@ Portable path:
 - Preserve the post-delivery navigation that explains each document section and
   every delivered Sheet tab; do not hand off unexplained links.
 - Keep the deterministic validation and scoring scripts when Node.js is available.
+- Preserve the capability-aware recent-market check. Retain at most three dated,
+  locally relevant and actionable signals; omit the document section when none
+  pass rather than padding it with generic news.
+- Before every MMM Analytics/BI dashboard query, check for `crm-data-query`. If
+  available, the actual instruction starts `用crm-data-query取数：<URL>` and is
+  validated before use; browser is a recorded fallback. GCRM Top Product remains
+  on the browser/API/export route until that capability supports it.
 - Always attempt the creative query for the fixed eight Product IDs with
   `Ecommerce Product ID`, never Shop Name. Empty or blocked results do not block
-  the main report, but the attempt and status must be recorded.
+  the main report, but the capability check, route, attempt and status must be recorded.
 
 If the host lacks `@oai/artifact-tool`, it may create the online Feishu Sheet
 directly with typed data and native styles. If it uses an XLSX transfer artifact,

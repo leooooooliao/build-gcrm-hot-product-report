@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { buildDeliveryManifest, expectedReadback, reconcileDelivery } from "./delivery_contract.mjs";
 import { CREATIVE_DASHBOARD_URL, validateCreativeLinks } from "./creative_contract.mjs";
+import { validateMarketContext } from "./market_context_contract.mjs";
 import { CORE_SHEET_NAMES, CREATIVE_HEADERS, POOL_HEADERS, RAW_HEADERS, validateSheetDelivery } from "./sheet_contract.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -84,6 +85,30 @@ const spec = {
   },
   product_translations: translations,
   summary_bullets: ["结论一", "结论二", "结论三"],
+  market_context: {
+    schema_version: "1.0.0",
+    search_available: true,
+    attempted: true,
+    attempted_at: "2026-08-02T11:00:00Z",
+    queries: ["US pet supplies recall July 2026"],
+    status: "completed",
+    signals: [
+      {
+        signal_type: "风险信号",
+        title: "宠物用品安全提醒样例",
+        date: "2026-08-01",
+        source_name: "Example regulator",
+        source_url: "https://example.com/pet-safety",
+        relevance_to: ["宠物用品", "g1"],
+        what_changed: "监管机构发布与该商品原型直接相关的安全提醒。",
+        why_it_matters: "会改变推荐品的合规与供应商审核动作。",
+        merchant_action: "上架前补充合规文件并复核产品声明。",
+        confidence: "high",
+        relevance_score: 6,
+      },
+    ],
+    blocked_reason: null,
+  },
   recommendations: {
     benchmarks: [
       recommendation("b2", "饮水机", "仅作标杆", "标杆2"),
@@ -169,12 +194,25 @@ try {
   const creativeLinksPath = path.join(tempDir, "creative-links.json");
   const blockedCreativeLinksPath = path.join(tempDir, "creative-links-blocked.json");
   const blockedBriefPath = path.join(tempDir, "brief-blocked.xml");
+  const emptyMarketSpecPath = path.join(tempDir, "report-spec-empty-market.json");
+  const emptyMarketBriefPath = path.join(tempDir, "brief-empty-market.xml");
   await fs.writeFile(specPath, `${JSON.stringify(spec, null, 2)}\n`, "utf8");
   const creativeLinks = {
-    schema_version: "1.1.0",
+    schema_version: "1.2.0",
     query_status: "completed",
     attempted: true,
     attempted_at: "2026-08-02T12:00:00Z",
+    routing: {
+      capability_checked: true,
+      crm_data_query_available: true,
+      crm_data_query_attempted: true,
+      query_route: "crm-data-query",
+      query_prompts: [
+        `用crm-data-query取数：${CREATIVE_DASHBOARD_URL} 请设置 Pdate=2026-07-05至2026-08-01，Ecommerce Product ID=${manifest.recommendation_ids.slice(0, 5).join(",")}；返回 Ecommerce Product ID、Dollar Revenue、URL。`,
+        `用crm-data-query取数：${CREATIVE_DASHBOARD_URL} 请设置 Pdate=2026-07-05至2026-08-01，Ecommerce Product ID=${manifest.recommendation_ids.slice(5).join(",")}；返回 Ecommerce Product ID、Dollar Revenue、URL。`,
+      ],
+      fallback_reason: null,
+    },
     meta: {
       source_url: CREATIVE_DASHBOARD_URL,
       period_start: "2026-07-05",
@@ -191,6 +229,11 @@ try {
   const blockedCreativeLinks = {
     ...structuredClone(creativeLinks),
     query_status: "blocked",
+    routing: {
+      ...structuredClone(creativeLinks.routing),
+      query_route: "crm-data-query+browser",
+      fallback_reason: "crm-data-query 重试失败后浏览器看板仍未返回结果",
+    },
     links: [],
     counts: Object.fromEntries(manifest.recommendation_ids.map((productId) => [productId, 0])),
     blocked_reason: "看板在一次安全重试后仍未返回结果",
@@ -204,11 +247,27 @@ try {
   assert.equal(validateCreativeLinks(creativeLinks, manifest.recommendation_ids).valid, true);
   assert.equal(validateCreativeLinks(blockedCreativeLinks, manifest.recommendation_ids).valid, true);
   assert.equal(validateCreativeLinks(emptyCreativeLinks, manifest.recommendation_ids).valid, true);
+  assert.equal(validateMarketContext(spec.market_context).valid, true);
+  const browserCreativeLinks = structuredClone(creativeLinks);
+  browserCreativeLinks.routing = {
+    capability_checked: true,
+    crm_data_query_available: false,
+    crm_data_query_attempted: false,
+    query_route: "browser",
+    query_prompts: [],
+    fallback_reason: null,
+  };
+  assert.equal(validateCreativeLinks(browserCreativeLinks, manifest.recommendation_ids).valid, true);
   const skippedCreativeLinks = { ...structuredClone(blockedCreativeLinks), attempted: false };
   assert.match(validateCreativeLinks(skippedCreativeLinks, manifest.recommendation_ids).errors.join("\n"), /skipped creative query/);
   const shopNameCreativeLinks = structuredClone(creativeLinks);
   shopNameCreativeLinks.meta.filter_field = "Shop Name";
   assert.match(validateCreativeLinks(shopNameCreativeLinks, manifest.recommendation_ids).errors.join("\n"), /not Shop Name/);
+  const skippedPreferredRoute = structuredClone(creativeLinks);
+  skippedPreferredRoute.routing.crm_data_query_attempted = false;
+  skippedPreferredRoute.routing.query_route = "browser";
+  skippedPreferredRoute.routing.query_prompts = [];
+  assert.match(validateCreativeLinks(skippedPreferredRoute, manifest.recommendation_ids).errors.join("\n"), /must be true when crm-data-query is available/);
   await fs.writeFile(creativeLinksPath, `${JSON.stringify(creativeLinks, null, 2)}\n`, "utf8");
   await fs.writeFile(blockedCreativeLinksPath, `${JSON.stringify(blockedCreativeLinks, null, 2)}\n`, "utf8");
   await execFileAsync(process.execPath, [
@@ -221,6 +280,8 @@ try {
   const briefXml = await fs.readFile(briefPath, "utf8");
   assert.match(briefXml, new RegExp(`交付校验码：${manifest.delivery_id}`));
   assert.match(briefXml, /GMV 205K（\+29\.8%）/);
+  assert.match(briefXml, /近期市场信号/);
+  assert.match(briefXml, /宠物用品安全提醒样例/);
   assert.match(briefXml, /为什么值得看/);
   assert.match(briefXml, /本地市场与季节补充（AI定性分析，未联网核验，仅供参考）/);
   assert.match(briefXml, /结论与动作/);
@@ -229,6 +290,28 @@ try {
   assert.doesNotMatch(briefXml, /本次未执行素材查询/);
   assert.doesNotMatch(briefXml, /<table>/);
   assert.doesNotMatch(briefXml, /Conflicting rising-row copy/);
+  const emptyMarketSpec = structuredClone(spec);
+  emptyMarketSpec.market_context = {
+    schema_version: "1.0.0",
+    search_available: false,
+    attempted: false,
+    attempted_at: null,
+    queries: [],
+    status: "unavailable",
+    signals: [],
+    blocked_reason: null,
+  };
+  await fs.writeFile(emptyMarketSpecPath, `${JSON.stringify(emptyMarketSpec, null, 2)}\n`, "utf8");
+  await execFileAsync(process.execPath, [
+    path.join(scriptDir, "build_feishu_brief.mjs"),
+    "--input", emptyMarketSpecPath,
+    "--output", emptyMarketBriefPath,
+    "--sheet-url", "https://example.larksuite.com/sheets/test",
+    "--creative-links", creativeLinksPath,
+  ]);
+  const emptyMarketBriefXml = await fs.readFile(emptyMarketBriefPath, "utf8");
+  assert.doesNotMatch(emptyMarketBriefXml, /近期市场信号/);
+  assert.match(emptyMarketBriefXml, /<h1>二、动作标签怎么理解<\/h1>/);
   await execFileAsync(process.execPath, [
     path.join(scriptDir, "build_feishu_brief.mjs"),
     "--input", specPath,
@@ -326,5 +409,8 @@ process.stdout.write(`${JSON.stringify({
   atomic_header_contract_test: "passed",
   creative_links_sheet_and_brief_test: "passed",
   creative_query_attempt_gate_test: "passed",
+  creative_query_route_gate_test: "passed",
   creative_blocked_nonblocking_test: "passed",
+  market_context_gate_test: "passed",
+  empty_market_section_omission_test: "passed",
 }, null, 2)}\n`);

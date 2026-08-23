@@ -84,9 +84,11 @@ Keep updates short:
 1. Filters confirmed.
 2. Banners and row counts collected.
 3. Images, average price, ads cost, midpoint TR, and channel metrics matched.
-4. Creative query attempted for the fixed 2+6 Product IDs; report completed,
-   empty, or blocked status without stopping the main report.
-5. Feishu Sheet created, read back, and validated; then the concise Feishu
+4. Recent market check completed; retain only locally relevant signals that
+   change a merchant action, or omit the section.
+5. Creative-query capability checked; use `crm-data-query` first when available,
+   then report completed, empty, or blocked status without stopping the main report.
+6. Feishu Sheet created, read back, and validated; then the concise Feishu
    recommendation document is generated and both artifacts are reconciled.
 
 Do not narrate browser mechanics unless an interaction failed.
@@ -100,6 +102,8 @@ recipient can navigate the report without exploring it first.
 Explain the Feishu recommendation document:
 
 - `本期结论`: the three decisions that should be read first.
+- `近期市场信号`（有符合条件的信号时才出现）: dated local demand, platform,
+  or risk information that changes a merchant action.
 - `动作标签怎么理解`: the difference between 快速跟进、条件跟进、小单测试、
   and 仅作标杆.
 - `标杆品`: mature high-scale products to learn from, not automatic sourcing
@@ -126,8 +130,8 @@ Use this compact shape:
 
 > **这两份交付物怎么用**
 >
-> - 飞书文档：先看本期结论，再按标杆品/增长品阅读具体推荐；动作标签说明
->   解释每个建议的投入方式，文末进入完整数据。
+> - 飞书文档：先看本期结论；若有“近期市场信号”，再看哪些当地事件、平台
+>   或风险信息会改变动作；随后按标杆品/增长品阅读推荐，文末进入完整数据。
 > - 飞书电子表格：结论看最终推荐，选品池看候选商品，Top50原始榜单做
 >   数据复核，使用说明查口径；素材链接页保留推荐商品的素材或查询状态。
 
